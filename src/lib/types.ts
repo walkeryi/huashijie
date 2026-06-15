@@ -16,6 +16,16 @@ export interface WorldCard {
   coverEmoji: string     // 封面 emoji
   initialScene: string   // 初始场景描述
   attributes: AttributeDef[]
+  npcs: NPCDef[]
+  flags: string[]
+  startingItems: string[]
+}
+
+export interface NPCDef {
+  id: string              // "blacksmith"
+  name: string            // "铁匠老王"
+  description: string     // 背景描述
+  initialAffinity: number // 初始好感 (0-100)
 }
 
 // ========== 游戏状态 ==========
@@ -30,18 +40,29 @@ export interface DialogueEntry {
 export interface GameOption {
   text: string
   attributeChecks?: Record<string, string>  // 例如 {courage: ">= 3"}
+  npcAffinityChecks?: Record<string, string> // {blacksmith: ">= 40"}
+  flagChecks?: string[]                      // ["found_allies"]
+  flagNot?: string[]                         // ["betrayed_king"]
+  itemChecks?: string[]                      // ["rusty_key"]
+  itemNot?: string[]                         // ["poison_vial"]
 }
 
 export interface AIResponse {
   narration: string
   options: GameOption[]
   attributeChanges: Record<string, number>   // 例如 {courage: 2, health: -1}
+  npcAffinityChanges: Record<string, number>
+  newFlags: string[]
+  lostFlags: string[]
+  itemsGained: string[]
+  itemsLost: string[]
 }
 
 export interface PlayerState {
   playerName: string
   attributes: Record<string, number>  // 例如 {courage: 5, health: 8}
   flags: Record<string, boolean>      // 例如 {met_king: true}
+  inventory: string[]
 }
 
 // ========== 存档 ==========
@@ -74,6 +95,7 @@ export interface GameState {
   provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'
   model: string
   customBaseURL: string
+  npcAffinities: Record<string, number>
 }
 
 export type GameAction =
@@ -89,3 +111,4 @@ export type GameAction =
   | { type: 'LOAD_SAVE'; save: SaveData; worldCard: WorldCard }
   | { type: 'REFRESH_SAVES'; saves: SaveData[] }
   | { type: 'RETURN_TO_MENU' }
+  | { type: 'INIT_NPC_AFFINITIES'; affinities: Record<string, number> }
