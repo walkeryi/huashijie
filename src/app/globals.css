@@ -25,7 +25,6 @@ body {
   font-size: var(--font-size-base, 16px);
 }
 
-/* 背景纹理覆盖 */
 body::before {
   content: '';
   position: fixed;
@@ -35,34 +34,24 @@ body::before {
   background: var(--bg-texture);
 }
 
-/* 全局应用主题边框样式 */
-.rounded-xl,
-[class*="rounded-xl"] {
-  border-radius: var(--border-radius) !important;
-}
-
-.rounded-lg,
-[class*="rounded-lg"] {
-  border-radius: calc(var(--border-radius) - 0.125rem) !important;
-}
-
-.rounded-2xl,
-[class*="rounded-2xl"] {
-  border-radius: calc(var(--border-radius) + 0.25rem) !important;
-}
-
-/* 按钮质感 */
-button:not([class*="bg-[var(--accent)]"]):not([class*="bg-[var(--danger)]"]) {
-  box-shadow: var(--button-depth);
-}
-
-/* 主题边框 */
-[class*="border"] {
+/* 仅对按钮和卡片应用主题边框样式，不碰 input/select */
+button:where(:not([class*="no-theme"])),
+[class*="rounded"]:where(:not(input):not(select):not(textarea)) {
+  border-radius: var(--border-radius);
   border-style: var(--border-style);
   border-width: var(--border-width);
 }
 
-/* 自定义滚动条 */
+/* input/select/textarea 保持简洁 */
+input, select, textarea {
+  border-radius: var(--border-radius);
+}
+
+/* 按钮质感 */
+button:where(:not([class*="no-theme"])) {
+  box-shadow: var(--button-depth);
+}
+
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -71,5 +60,4 @@ button:not([class*="bg-[var(--accent)]"]):not([class*="bg-[var(--danger)]"]) {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
-
 .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
