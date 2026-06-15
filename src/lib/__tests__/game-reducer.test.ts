@@ -174,6 +174,7 @@ describe('gameReducer', () => {
       dialogueHistory: [
         { id: 'x', role: 'narrator' as const, content: '旧剧情', timestamp: 1 },
       ],
+      apiKey: 'test-key',
     }
 
     const next = gameReducer(state, { type: 'LOAD_SAVE', save, worldCard: card })
@@ -206,7 +207,7 @@ describe('gameReducer', () => {
   it('updates save slots', () => {
     const state = createInitialState()
     const saves = [
-      { id: 'a', slotName: '档1', timestamp: 1, worldCardId: 'w', playerState: { playerName: '', attributes: {}, flags: {} }, dialogueHistory: [] },
+      { id: 'a', slotName: '档1', timestamp: 1, worldCardId: 'w', playerState: { playerName: '', attributes: {}, flags: {} }, dialogueHistory: [], apiKey: '' },
     ]
 
     const next = gameReducer(state, { type: 'REFRESH_SAVES', saves })

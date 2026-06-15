@@ -53,6 +53,7 @@ export interface SaveData {
   worldCardId: string
   playerState: PlayerState
   dialogueHistory: DialogueEntry[]
+  apiKey: string
 }
 
 // ========== 游戏上下文 ==========
@@ -69,10 +70,12 @@ export interface GameState {
   isLoading: boolean
   error: string | null
   saveSlots: SaveData[]
+  apiKey: string
 }
 
 export type GameAction =
   | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
+  | { type: 'SET_API_KEY'; apiKey: string }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_RESPONSE'; response: AIResponse; playerEntry: DialogueEntry }
   | { type: 'SET_ERROR'; error: string }

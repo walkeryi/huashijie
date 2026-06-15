@@ -115,11 +115,22 @@ export default function WorldCardSelector() {
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl">
         {/* Title */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-6">
           <h1 className="text-4xl font-bold mb-2">🌍 陪你一起冒险</h1>
           <p className="text-lg text-[var(--text-secondary)]">
             选择你的世界，开始一段全新的旅程
           </p>
+        </div>
+
+        {/* API Key Input */}
+        <div className="max-w-md mx-auto mb-8">
+          <input
+            type="password"
+            value={state.apiKey}
+            onChange={e => actions.setApiKey(e.target.value)}
+            placeholder="输入你的 Anthropic API Key"
+            className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] transition-colors text-center"
+          />
         </div>
 
         {/* World Card Grid */}

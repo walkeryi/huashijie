@@ -4,10 +4,10 @@ import { WorldCard, PlayerState, DialogueEntry, AIResponse } from '@/lib/types'
 
 const API_TIMEOUT_MS = 30000
 
-function getAnthropicClient(): Anthropic {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+function getAnthropicClient(apiKeyOverride?: string): Anthropic {
+  const apiKey = apiKeyOverride || process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
-    throw new Error('服务器配置错误：缺少 ANTHROPIC_API_KEY')
+    throw new Error('缺少 API Key：请在页面输入或设置 ANTHROPIC_API_KEY 环境变量')
   }
   return new Anthropic({ apiKey })
 }
@@ -112,10 +112,11 @@ function validateAIResponse(response: AIResponse, fallbackText: string): AIRespo
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { worldCard, playerState, dialogueHistory } = body as {
+    const { worldCard, playerState, dialogueHistory, apiKey: requestApiKey } = body as {
       worldCard: WorldCard
       playerState: PlayerState
       dialogueHistory: DialogueEntry[]
+      apiKey?: string
     }
 
     // 输入验证
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = buildSystemPrompt(worldCard, playerState)
-    const anthropic = getAnthropicClient()
+    const anthropic = getAnthropicClient(requestApiKey)
 
     // 带超时的 API 调用
     const controller = new AbortController()

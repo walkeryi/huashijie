@@ -38,6 +38,7 @@ export function createInitialState(): GameState {
     isLoading: false,
     error: null,
     saveSlots: [],
+    apiKey: '',
   }
 }
 
@@ -66,6 +67,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         error: null,
       }
     }
+
+    case 'SET_API_KEY':
+      return { ...state, apiKey: action.apiKey }
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading }
@@ -135,6 +139,7 @@ interface GameContextValue {
   state: GameState
   dispatch: React.Dispatch<GameAction>
   actions: {
+    setApiKey: (key: string) => void
     startGame: (worldCard: WorldCard, playerName: string) => void
     submitAction: (optionText: string) => Promise<void>
     saveGame: (slot: number, name: string) => void
@@ -155,6 +160,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSaves = useCallback(() => {
     dispatch({ type: 'REFRESH_SAVES', saves: listSaves() })
+  }, [])
+
+  const setApiKey = useCallback((key: string) => {
+    dispatch({ type: 'SET_API_KEY', apiKey: key })
   }, [])
 
   const startGame = useCallback((worldCard: WorldCard, playerName: string) => {
@@ -186,6 +195,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           worldCard: current.worldCard,
           playerState: current.playerState,
           dialogueHistory: historyWithInput,
+          apiKey: current.apiKey,
         }),
       })
 
@@ -219,7 +229,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         content: data.narration,
         timestamp: Date.now(),
       }]
-      autoSave(current.worldCard.id, updatedPlayer, fullHistory)
+      autoSave(current.worldCard.id, updatedPlayer, fullHistory, current.apiKey)
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e)
       dispatch({ type: 'SET_ERROR', error: message || '未知错误' })
@@ -231,7 +241,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const saveGame = useCallback((slot: number, name: string) => {
     const current = stateRef.current
     if (!current.worldCard || !current.playerState) return
-    saveToSlot(slot, 'save_' + Date.now(), name, current.worldCard.id, current.playerState, current.dialogueHistory)
+    saveToSlot(slot, 'save_' + Date.now(), name, current.worldCard.id, current.playerState, current.dialogueHistory, current.apiKey)
     refreshSaves()
   }, [refreshSaves])
 
@@ -256,6 +266,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     state,
     dispatch,
     actions: {
+      setApiKey,
       startGame,
       submitAction,
       saveGame,
@@ -264,7 +275,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       refreshSaves,
       returnToMenu,
     },
-  }), [state, dispatch, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
+  }), [state, dispatch, setApiKey, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }

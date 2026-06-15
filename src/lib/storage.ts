@@ -31,6 +31,7 @@ export function saveToSlot(
   worldCardId: string,
   playerState: PlayerState,
   dialogueHistory: DialogueEntry[],
+  apiKey: string,
 ): void {
   if (typeof window === 'undefined') return
   const data: SaveData = {
@@ -40,6 +41,7 @@ export function saveToSlot(
     worldCardId,
     playerState,
     dialogueHistory,
+    apiKey,
   }
   localStorage.setItem(SAVE_PREFIX + slot, JSON.stringify(data))
 }
@@ -49,6 +51,7 @@ export function autoSave(
   worldCardId: string,
   playerState: PlayerState,
   dialogueHistory: DialogueEntry[],
+  apiKey: string,
 ): void {
   if (typeof window === 'undefined') return
   const data: SaveData = {
@@ -58,6 +61,7 @@ export function autoSave(
     worldCardId,
     playerState,
     dialogueHistory,
+    apiKey,
   }
   localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data))
 }
