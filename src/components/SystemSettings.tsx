@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { useGame } from '@/lib/game-context'
 import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 
@@ -8,22 +8,6 @@ type TabType = 'theme' | 'api'
 
 export default function SystemSettings() {
   const { state, actions } = useGame()
-  const prevApiKey = useRef(state.apiKey)
-
-  // 监控 state.apiKey 的每一次变化
-  useEffect(() => {
-    if (prevApiKey.current !== state.apiKey) {
-      console.log(
-        '👁️ [apiKey变化]',
-        '旧:', prevApiKey.current ? prevApiKey.current.slice(0,20)+'...' : '(空)',
-        '→ 新:', state.apiKey ? state.apiKey.slice(0,20)+'...' : '(空)',
-        'provider:', state.provider,
-        '时间:', new Date().toLocaleTimeString()
-      )
-      console.trace('👁️ 变化来源:')
-      prevApiKey.current = state.apiKey
-    }
-  }, [state.apiKey, state.provider])
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabType>('theme')
 
@@ -174,10 +158,7 @@ export default function SystemSettings() {
           <div className="px-6 py-6 space-y-3">
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
-              <input type="password" value={state.apiKey} onChange={e => {
-                  console.log('🔍 INPUT: apiKey onChange, 新值长度=', e.target.value.length, '前5字符=', e.target.value.slice(0,5))
-                  actions.setApiKey(e.target.value)
-                }}
+              <input type="password" value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
                 placeholder="sk-..."
                 style={{
                   border: 'var(--border-width) var(--border-style) var(--border)',
