@@ -54,6 +54,32 @@ export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState
     : ''
   const flagsDisplay = flagsText || '无'
 
+  // 故事节拍进度
+  const beats = worldCard.storyBeats ?? []
+  const completedBeats = beats.filter(b => playerState.flags?.[b.id]).map(b => b.name)
+  const availableBeats = beats.filter(b => {
+    if (playerState.flags?.[b.id]) return false // 已完成
+    // 至少一个前置节拍已完成，或者这个节拍不需要前置（intro）
+    const anyUnlockerComplete = b.id === 'intro' || beats.some(
+      ub => ub.unlocks.includes(b.id) && playerState.flags?.[ub.id]
+    )
+    if (!anyUnlockerComplete) return false
+    // 检查前置条件
+    if (b.preconditions?.flagChecks) {
+      for (const f of b.preconditions.flagChecks) {
+        if (!playerState.flags?.[f]) return false
+      }
+    }
+    return true
+  }).map(b => b.name)
+  const lockedBeats = beats.filter(b => !completedBeats.includes(b.name) && !availableBeats.includes(b.name)).map(b => b.name)
+
+  const beatProgress = [
+    completedBeats.length > 0 ? `✅ 已完成: ${completedBeats.join('、')}` : '',
+    availableBeats.length > 0 ? `🔓 可解锁: ${availableBeats.join('、')}` : '',
+    lockedBeats.length > 0 ? `🔒 未解锁: ${lockedBeats.join('、')}` : '',
+  ].filter(Boolean).join('\n') || '无节拍数据'
+
   const exampleAttr = worldCard.attributes[0]?.name ?? '属性'
 
   return `你是一个文字冒险游戏的叙事引擎。你必须严格遵循以下设定来运行游戏。
@@ -74,12 +100,16 @@ ${inventoryText}
 ## 已解锁旗标
 ${flagsDisplay}
 
+## 故事进度
+${beatProgress}
+
 ## 你的职责
 1. 根据玩家的选择推进故事
 2. 描述场景、NPC 反应和事件发展
 3. 故事的走向应该受玩家属性影响——属性高的可以发现更多线索、说服NPC、克服困难
 4. 每次回复结束给出 2-4 个选项供玩家选择
 5. 选项可以需要属性条件（比如 ${exampleAttr} >= 5 才能选的选项）
+6. **故事节拍规则：** 玩家的行动应朝向解锁🔓可用的节拍。当玩家完成了某个可用节拍（参考其 description），在 newFlags 中加入该节拍 id，并应用对应 effects。**不要**在对话中提及未解锁节拍的内容或 NPC。
 
 ## 输出格式
 你必须严格按照以下 JSON 格式输出（不要包含 markdown 代码块标记，只输出纯 JSON）：

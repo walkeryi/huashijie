@@ -17,6 +17,7 @@ function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
     npcs: [],
     flags: [],
     startingItems: [],
+    storyBeats: [],
     ...overrides,
   }
 }

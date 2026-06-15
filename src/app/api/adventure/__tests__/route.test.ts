@@ -20,6 +20,7 @@ function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
     ],
     flags: ['found_allies', 'betrayed_king'],
     startingItems: ['rusty_key'],
+    storyBeats: [],
     ...overrides,
   }
 }

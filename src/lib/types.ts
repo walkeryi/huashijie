@@ -19,6 +19,25 @@ export interface WorldCard {
   npcs: NPCDef[]
   flags: string[]
   startingItems: string[]
+  storyBeats: StoryBeat[]
+}
+
+export interface StoryBeat {
+  id: string
+  name: string
+  description: string
+  preconditions?: {
+    attributeChecks?: Record<string, string>
+    npcAffinityChecks?: Record<string, string>
+    flagChecks?: string[]
+    itemChecks?: string[]
+  }
+  effects: {
+    newFlags?: string[]
+    itemsGained?: string[]
+    npcAffinityChanges?: Record<string, number>
+  }
+  unlocks: string[]
 }
 
 export interface NPCDef {

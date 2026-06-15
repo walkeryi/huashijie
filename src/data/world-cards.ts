@@ -33,6 +33,13 @@ export const presetWorldCards: WorldCard[] = [
     ],
     flags: ['found_crystal_clue', 'allied_with_mechanics', 'confronted_nobles', 'discovered_truth'],
     startingItems: ['机械扳手', '残破的飞艇日志'],
+    storyBeats: [
+      { id: 'intro', name: '坠毁醒来', description: '在飞艇残骸中苏醒，弄清发生了什么，决定下一步行动。', effects: {}, unlocks: ['find_clue'] },
+      { id: 'find_clue', name: '发现线索', description: '找到关于核心水晶下落的第一个线索。', effects: { newFlags: ['found_crystal_clue'] }, unlocks: ['confront_noble', 'investigate_mines'] },
+      { id: 'confront_noble', name: '与贵族对质', description: '接触天空贵族洛或卫队长赵，了解真相的另一面。', preconditions: { attributeChecks: { courage: '>= 5' } }, effects: { newFlags: ['confronted_nobles'] }, unlocks: ['discover_truth'] },
+      { id: 'investigate_mines', name: '调查矿坑', description: '深入地下矿坑寻找核心水晶的踪迹。', preconditions: { itemChecks: ['机械扳手'], attributeChecks: { mechanical: '>= 4' } }, effects: { newFlags: ['found_mine_clue'] }, unlocks: ['discover_truth'] },
+      { id: 'discover_truth', name: '揭示真相', description: '拼凑所有线索，发现核心水晶失窃背后的真正阴谋。', preconditions: { npcAffinityChecks: { old_mechanic: '>= 40' } }, effects: { newFlags: ['discovered_truth'] }, unlocks: [] },
+    ],
   },
   {
     id: 'jade_dynasty',
@@ -67,5 +74,12 @@ export const presetWorldCards: WorldCard[] = [
     ],
     flags: ['found_ancient_scroll', 'awakened_spirit_sense', 'exposed_corruption', 'reunited_last_beast'],
     startingItems: ['泛黄的古卷', '铜钱 x5'],
+    storyBeats: [
+      { id: 'intro', name: '京城书生', description: '在茶馆获取信息，决定出城寻找灵兽的方向。', effects: {}, unlocks: ['find_scroll'] },
+      { id: 'find_scroll', name: '寻找古卷', description: '找到完整的灵兽古卷，解锁更多线索。', effects: { newFlags: ['found_ancient_scroll'] }, unlocks: ['awaken_sense', 'ally_tea_master'] },
+      { id: 'awaken_sense', name: '觉醒灵识', description: '在灵兽守护者青的指导下觉醒灵力感知。', preconditions: { npcAffinityChecks: { spirit_guardian: '>= 20' } }, effects: { newFlags: ['awakened_spirit_sense'] }, unlocks: ['expose_truth'] },
+      { id: 'ally_tea_master', name: '结盟说书人', description: '说服茶馆说书人柳提供朝廷密报。', preconditions: { attributeChecks: { charm: '>= 5' } }, effects: { newFlags: ['allied_with_tea_master'] }, unlocks: ['expose_truth'] },
+      { id: 'expose_truth', name: '揭露真相', description: '揭露朝廷腐败与龙脉异象的关联，寻找最后一只灵兽。', preconditions: { npcAffinityChecks: { court_official: '>= 30' } }, effects: { newFlags: ['exposed_corruption'] }, unlocks: [] },
+    ],
   },
 ]
