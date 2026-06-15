@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useGame } from '@/lib/game-context'
 import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 
@@ -8,6 +8,22 @@ type TabType = 'theme' | 'api'
 
 export default function SystemSettings() {
   const { state, actions } = useGame()
+  const prevApiKey = useRef(state.apiKey)
+
+  // 监控 state.apiKey 的每一次变化
+  useEffect(() => {
+    if (prevApiKey.current !== state.apiKey) {
+      console.log(
+        '👁️ [apiKey变化]',
+        '旧:', prevApiKey.current ? prevApiKey.current.slice(0,20)+'...' : '(空)',
+        '→ 新:', state.apiKey ? state.apiKey.slice(0,20)+'...' : '(空)',
+        'provider:', state.provider,
+        '时间:', new Date().toLocaleTimeString()
+      )
+      console.trace('👁️ 变化来源:')
+      prevApiKey.current = state.apiKey
+    }
+  }, [state.apiKey, state.provider])
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabType>('theme')
 
