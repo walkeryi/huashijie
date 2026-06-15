@@ -1,139 +1,105 @@
-# 话世界 - UI 重构：主题系统 + 统一导航
+# 话世界 - 深度主题系统 + 标签页设置
 
 ## 背景
 
-当前 UI 存在以下问题：返回按钮样式不统一、设置和登录混杂、缺少视觉风格选项、主菜单布局不够游戏化。
+当前主题仅换色，需要深度主题：字体、边框形态、按钮质感、背景纹理都随主题变化。设置改为标签页。
 
 ## 设计目标
 
-- 4 套完整主题配色，一键切换，所有元素统一变化
-- 统一返回按钮位置和样式
-- 设置菜单层次清晰：主菜单 → 基础设置 / API 设置
-- 登录按钮独立于设置
-- 主菜单游戏化布局
+- 4 套深度主题：默认(金辉) / 蒸汽(工业) / 古风(朱墨) / 赛博
+- 每套定义：颜色 × 字体 × 边框形态 × 按钮质感 × 背景纹理
+- 设置用标签页：[主题] [API]
+- 返回按钮已统一
 
 ## 主题系统
 
-4 套主题，每套定义全部 CSS 变量：
+### CSS 变量体系
 
-### 🟡 金辉（默认）
-| 变量 | 值 |
-|------|------|
-| `--bg-primary` | `#0f0f0f` |
-| `--bg-secondary` | `#1a1a1a` |
-| `--bg-card` | `#1e1e1e` |
-| `--text-primary` | `#e0d5c1` |
-| `--text-secondary` | `#a09888` |
-| `--accent` | `#c9a96e` |
-| `--accent-hover` | `#d4b87a` |
-| `--danger` | `#8b4444` |
-| `--border` | `#2a2a2a` |
+| 变量 | 作用 | 默认 | 蒸汽 |
+|------|------|------|------|
+| `--bg-primary` | 主背景 | `#0f0f0f` | `#1a1410` |
+| `--bg-secondary` | 次背景 | `#1a1a1a` | `#231e17` |
+| `--bg-card` | 卡片 | `#1e1e1e` | `#292218` |
+| `--text-primary` | 主文字 | `#e0d5c1` | `#e8dcc8` |
+| `--text-secondary` | 次文字 | `#a09888` | `#b0a088` |
+| `--accent` | 强调色 | `#c9a96e` | `#b8954a` |
+| `--accent-hover` | 悬停 | `#d4b87a` | `#c9a65d` |
+| `--danger` | 危险 | `#8b4444` | `#9b5050` |
+| `--border` | 边框色 | `#2a2a2a` | `#4a3828` |
+| `--font-family` | 字体 | Georgia+Noto Serif SC | Impact+sans-serif |
+| `--border-radius` | 圆角 | `0.75rem` | `0.25rem` |
+| `--border-width` | 边框粗细 | `1px` | `2px` |
+| `--border-style` | 边框样式 | `solid` | `double` |
+| `--button-depth` | 按钮立体感 | `0` | `2px 2px 0 var(--border)` |
+| `--bg-texture` | 背景纹理 | `none` | `repeating-linear-gradient(...)` |
 
-### ⚙️ 铜锈
-| 变量 | 值 |
-|------|------|
-| `--bg-primary` | `#1a1410` |
-| `--bg-secondary` | `#231e17` |
-| `--bg-card` | `#292218` |
-| `--text-primary` | `#e8dcc8` |
-| `--text-secondary` | `#b0a088` |
-| `--accent` | `#7a9a7e` |
-| `--accent-hover` | `#8db091` |
-| `--danger` | `#9b5050` |
-| `--border` | `#3a3228` |
+### 四套主题
 
-### 🏮 朱墨
-| 变量 | 值 |
-|------|------|
-| `--bg-primary` | `#111018` |
-| `--bg-secondary` | `#1a1822` |
-| `--bg-card` | `#201e28` |
-| `--text-primary` | `#f0e8e0` |
-| `--text-secondary` | `#c0b0a0` |
-| `--accent` | `#c45050` |
-| `--accent-hover` | `#d46565` |
-| `--danger` | `#8b3030` |
-| `--border` | `#2a2530` |
-
-### 🌿 青岚
-| 变量 | 值 |
-|------|------|
-| `--bg-primary` | `#0d1618` |
-| `--bg-secondary` | `#141f22` |
-| `--bg-card` | `#1a2628` |
-| `--text-primary` | `#dde8ea` |
-| `--text-secondary` | `#98b0b5` |
-| `--accent` | `#5aacb8` |
-| `--accent-hover` | `#6dc0cc` |
-| `--danger` | `#885555` |
-| `--border` | `#223338` |
-
-**实现方式**：文档根元素 `data-theme` 属性，JS 切换时改写 `:root` CSS 变量。选择存 localStorage。
-
-## 界面布局
-
-### 主菜单 (`/`)
+#### 🟡 金辉（默认）
+经典暖金暗黑，Georgia 衬线，柔和圆角，浅阴影按钮。
 ```
-┌─────────────────────────┐
-│        ☁️ 登录   ⚙️     │  ← 右上角固定
-│                         │
-│        🗣️               │
-│      话世界              │
-│  AI 驱动的文字冒险引擎    │
-│                         │
-│   [ 开始冒险 ⚔️ ]       │
-│   [ 📂 继续游戏 ]       │
-│                         │
-│  💾 离线模式 · 本地保存  │
-└─────────────────────────┘
+--bg-primary: #0f0f0f
+--accent: #c9a96e
+--font-family: "Georgia", "Noto Serif SC", serif
+--border-radius: 0.75rem
+--border-width: 1px
 ```
 
-### 统一返回按钮
-所有子页面左上角统一样式：
+#### ⚙️ 蒸汽（工业革命）
+深棕黄铜，Impact 粗体，直角双线框，深阴影按钮，铆钉纹理。
 ```
-← 返回
+--bg-primary: #1a1410
+--accent: #b8954a
+--font-family: "Impact", "SimHei", sans-serif
+--border-radius: 0.25rem
+--border-width: 2px
+--border-style: double
+--button-depth: 2px 2px 0 var(--border)
+--bg-texture: 横向暗纹
 ```
-- 位置：页面左上角，固定 padding
-- 样式：`px-3 py-2 rounded-xl border border-[var(--border)] text-sm hover:bg-[var(--bg-card)]`
-- 适用：世界选择、读档、创作台、设置子页面
 
-### 设置菜单
+#### 🏮 朱墨（古风）
+宣纸墨底，楷体，细线金框，温润按钮。
+```
+--bg-primary: #111018
+--accent: #c45050
+--font-family: "KaiTi", "STKaiti", "Noto Serif SC", serif
+--border-radius: 0.5rem
+--border-width: 1px
+--border-style: solid
+```
+
+#### 💜 赛博
+深紫蓝底，霓虹青强调，等宽字体，发光边框，暗纹背景。
+```
+--bg-primary: #0a0a1a
+--accent: #00ffcc
+--font-family: "Courier New", "Fira Code", monospace
+--border-radius: 0.25rem
+--border-width: 1px
+--border-style: solid
+--button-depth: 0 0 8px var(--accent)
+--bg-texture: 网格暗纹
+```
+
+### 设置页面
+
 ```
 ⚙️ 设置（全屏遮罩）
 ┌──────────────────┐
-│   ⚙️ 设置        │
+│ [主题]  [API]    │  ← 标签页
 │                  │
-│ 👤 基础设置  →   │
-│ 🔑 API 设置  →   │
+│ 主题选择 4选1    │
+│ 字体大小 小中大  │
 │                  │
-│   [ 返回 ]       │
+│   [关闭]         │
 └──────────────────┘
 ```
 
-基础设置内容：
-- 主题配色选择（4 选 1）
-- 字体大小（小/中/大）
-
-API 设置内容：
-- API Key
-- 提供商 + 模型
-- 测试连接
-
-### 右上角
-- `☁️ 登录`（AccountButton）：独立于设置，右侧
-- `⚙️`（SystemSettings）：齿轮，打开设置菜单
-
-## 关键设计决策
-
-- 风格 vs 主题：风格管按钮/界面形态（仅"默认"），主题管全部颜色（4 预设）。风格在创作台选，主题在基础设置选
-- 字体随主题变化：金辉=Georgia+Noto Serif SC，铜锈=Georgia+Courier New，朱墨=Georgia+Noto Serif SC，青岚=system-ui+Inter
-- 主题选择和字体大小存 localStorage
-- 返回按钮统一用 `border` 边框样式
-
 ## 验证
 
-1. 基础设置切换 4 个主题 → 全页颜色立刻变化
-2. 切换字体大小 → 文字变化
-3. 刷新浏览器 → 主题和字体保持
-4. 各页面"← 返回"按钮位置样式一致
-5. 主菜单只有 2 个按钮 + 右上角登录/设置
+1. 切换4个主题 → 颜色+字体+边框+按钮全面变化
+2. 蒸汽主题：直角双线框+粗体+铜色
+3. 赛博主题：发光边框+等宽字体+霓虹
+4. 设置标签页切换流畅
+5. 刷新保持主题

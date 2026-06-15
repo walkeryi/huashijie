@@ -10,32 +10,66 @@
   --accent-hover: #d4b87a;
   --danger: #8b4444;
   --border: #2a2a2a;
+  --font-family: "Georgia", "Noto Serif SC", serif;
+  --border-radius: 0.75rem;
+  --border-width: 1px;
+  --border-style: solid;
+  --button-depth: 0 1px 3px rgba(0,0,0,0.3);
+  --bg-texture: none;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  font-family: var(--font-family, 'Georgia', 'Noto Serif SC', serif);
+  font-family: var(--font-family);
   font-size: var(--font-size-base, 16px);
 }
 
+/* 背景纹理覆盖 */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bg-texture);
+}
+
+/* 全局应用主题边框样式 */
+.rounded-xl,
+[class*="rounded-xl"] {
+  border-radius: var(--border-radius) !important;
+}
+
+.rounded-lg,
+[class*="rounded-lg"] {
+  border-radius: calc(var(--border-radius) - 0.125rem) !important;
+}
+
+.rounded-2xl,
+[class*="rounded-2xl"] {
+  border-radius: calc(var(--border-radius) + 0.25rem) !important;
+}
+
+/* 按钮质感 */
+button:not([class*="bg-[var(--accent)]"]):not([class*="bg-[var(--danger)]"]) {
+  box-shadow: var(--button-depth);
+}
+
+/* 主题边框 */
+[class*="border"] {
+  border-style: var(--border-style);
+  border-width: var(--border-width);
+}
+
 /* 自定义滚动条 */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease-out;
-}
+.animate-fadeIn { animation: fadeIn 0.4s ease-out; }
