@@ -40,13 +40,14 @@ describe('storage', () => {
     expect(saves).toHaveLength(0)
   })
 
-  it('lists saved games sorted by newest first', () => {
+  it('lists saved games sorted by newest first', async () => {
     saveToSlot(1, 's1', '存档1', 'world_a', makePlayerState(), makeDialogueHistory())
+    // 确保时间戳不同
+    await new Promise(r => setTimeout(r, 5))
     saveToSlot(2, 's2', '存档2', 'world_b', makePlayerState(), makeDialogueHistory())
 
     const saves = listSaves()
     expect(saves).toHaveLength(2)
-    // 第二个保存的时间戳更新
     expect(saves[0].slotName).toBe('存档2')
     expect(saves[1].slotName).toBe('存档1')
   })

@@ -17,7 +17,7 @@ function sanitizePlayerName(name: string): string {
   return name.replace(/[\n\r\\]/g, '').slice(0, 50)
 }
 
-function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState): string {
+export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState): string {
   const attrText = Object.entries(playerState.attributes ?? {})
     .map(([key, val]) => {
       const def = worldCard.attributes.find(a => a.key === key)
