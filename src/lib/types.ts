@@ -40,12 +40,52 @@ export interface StoryBeat {
   unlocks: string[]
 }
 
-export interface NPCDef {
-  id: string              // "blacksmith"
-  name: string            // "铁匠老王"
-  description: string     // 背景描述
-  initialAffinity: number // 初始好感 (0-100)
+// ========== NPC 角色档案 ==========
+
+export interface NPCFieldMeta {
+  key: string
+  label: string
+  desc: string
+  type: 'string' | 'string[]' | 'boolean' | 'number'
+  fixed: boolean
+  runtimeRequired: boolean
+  nullable: boolean
 }
+
+export interface CustomFieldMeta {
+  type: 'string' | 'string[]' | 'boolean' | 'number'
+  key: string
+  label: string
+  desc: string
+}
+
+export interface NPCDef {
+  id: string
+  isMainCharacter: boolean
+  fields: Record<string, any>
+}
+
+// 运行时动态状态 — 从静态定义中剥离，防止存档污染
+export interface RuntimeNPCState {
+  currentSelfPerception: string
+  currentState: string
+}
+
+// 12 个静态预设字段（不含 runtime 字段）
+export const PRESET_NPC_FIELDS: NPCFieldMeta[] = [
+  { key: 'id', label: '标识符', desc: '唯一标识，同一角色在不同事件中保持一致', type: 'string', fixed: true, runtimeRequired: true, nullable: false },
+  { key: 'name', label: '角色名', desc: '角色的显示名称', type: 'string', fixed: true, runtimeRequired: true, nullable: false },
+  { key: 'isMainCharacter', label: '是主角', desc: '布尔标志；整张卡至多1个。系统字段，不在卡面展示。', type: 'boolean', fixed: true, runtimeRequired: true, nullable: false },
+  { key: 'gender', label: '性别', desc: '如：女/男/未知', type: 'string', fixed: true, runtimeRequired: true, nullable: true },
+  { key: 'origin', label: '来历', desc: '一句话说明出身或来源', type: 'string', fixed: true, runtimeRequired: true, nullable: true },
+  { key: 'birthday', label: '生日', desc: '纯时间值，格式必须符合当前世界历法', type: 'string', fixed: true, runtimeRequired: false, nullable: true },
+  { key: 'dialogueTone', label: '对话基调', desc: '稳定说话风格+性格底色', type: 'string', fixed: true, runtimeRequired: true, nullable: false },
+  { key: 'dialogueExamples', label: '说话示例', desc: 'few-shot示例对话；in_person≥6/sms≥4；in_person含*动作*+对白，sms禁*动作*', type: 'string', fixed: true, runtimeRequired: false, nullable: true },
+  { key: 'personalityTags', label: '性格标签', desc: '如：强势/沉稳/温和', type: 'string[]', fixed: true, runtimeRequired: false, nullable: true },
+  { key: 'appearance', label: '外貌特征', desc: '如：黑长直/金发碧眼', type: 'string', fixed: true, runtimeRequired: false, nullable: true },
+  { key: 'currentAttire', label: '当前衣着', desc: '当前具体衣着', type: 'string', fixed: true, runtimeRequired: false, nullable: true },
+  { key: 'initialAffinity', label: '初始好感度', desc: '角色初始好感值，范围-100~100，默认0', type: 'number', fixed: true, runtimeRequired: false, nullable: true },
+]
 
 // ========== 游戏状态 ==========
 
@@ -115,6 +155,7 @@ export interface GameState {
   model: string
   customBaseURL: string
   npcAffinities: Record<string, number>
+  npcRuntime: Record<string, RuntimeNPCState>
   saveMode: SaveMode
   accountName: string
 }

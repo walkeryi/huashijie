@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { gameReducer, createInitialState } from '../game-context'
-import { GameState, GameAction, WorldCard } from '../types'
+import { GameState, GameAction, WorldCard, PRESET_NPC_FIELDS } from '../types'
 
 function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
   return {
@@ -234,5 +234,30 @@ describe('gameReducer', () => {
 
     const next = gameReducer(state, { type: 'REFRESH_SAVES', saves })
     expect(next.saveSlots).toEqual(saves)
+  })
+})
+
+// ========== NPC 角色档案类型 ==========
+
+describe('PRESET_NPC_FIELDS', () => {
+  it('12 个静态预设字段符合 schema', () => {
+    const fields = PRESET_NPC_FIELDS
+    expect(fields).toHaveLength(12)
+    fields.forEach(f => {
+      expect(f).toHaveProperty('key')
+      expect(f).toHaveProperty('label')
+      expect(f).toHaveProperty('desc')
+      expect(f).toHaveProperty('type')
+      expect(f).toHaveProperty('fixed')
+      expect(f).toHaveProperty('runtimeRequired')
+      expect(f).toHaveProperty('nullable')
+      expect(['string', 'string[]', 'boolean', 'number']).toContain(f.type)
+    })
+  })
+
+  it('静态预设字段不含运行时字段 currentSelfPerception / currentState', () => {
+    const keys = PRESET_NPC_FIELDS.map(f => f.key)
+    expect(keys).not.toContain('currentSelfPerception')
+    expect(keys).not.toContain('currentState')
   })
 })
