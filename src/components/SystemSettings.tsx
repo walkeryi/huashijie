@@ -179,7 +179,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-4 py-8">
       <div className="w-full max-w-md shadow-2xl overflow-y-scroll max-h-[90vh]"
         style={{
           background: 'var(--bg-secondary)',
