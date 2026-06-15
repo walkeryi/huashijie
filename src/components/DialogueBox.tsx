@@ -91,9 +91,11 @@ export default function DialogueBox() {
                 const info = getModelInfo(entry.model)
                 if (!info) return null
                 return (
-                  <div className="flex items-center justify-end gap-1 mt-1.5 opacity-50">
-                    <img src={info.icon} alt={info.label} className="w-3.5 h-3.5" />
-                    <span className="text-[10px] text-[var(--text-secondary)]">{info.label}</span>
+                  <div className="flex items-center justify-end mt-2">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-primary)]/50 border border-[var(--border)]">
+                      <img src={info.icon} alt={info.label} className="w-5 h-5" />
+                      <span className="text-[11px] text-[var(--text-secondary)] leading-none">{info.label}</span>
+                    </div>
                   </div>
                 )
               })()}
