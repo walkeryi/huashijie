@@ -24,7 +24,12 @@ function sanitizePlayerName(name: string): string {
   return name.replace(/[\n\r\\]/g, '').slice(0, 50)
 }
 
-export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState, npcAffinities: Record<string, number> = {}): string {
+export function buildSystemPrompt(
+  worldCard: WorldCard,
+  playerState: PlayerState,
+  npcAffinities: Record<string, number> = {},
+  npcRuntime: Record<string, { currentSelfPerception: string; currentState: string }> = {},
+): string {
   const attrText = Object.entries(playerState.attributes ?? {})
     .map(([key, val]) => {
       const def = worldCard.attributes.find(a => a.key === key)
@@ -35,9 +40,18 @@ export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState
   // NPC 关系
   const npcText = worldCard.npcs.length > 0
     ? worldCard.npcs.map(npc => {
-        const affinity = npcAffinities[npc.id] ?? npc.initialAffinity
-        return `👤 ${npc.name} (好感: ${affinity}/100)`
-      }).join('\n')
+        const f = npc.fields
+        const affinity = npcAffinities[npc.id] ?? f.initialAffinity ?? 0
+        let text = `👤 ${f.name || npc.id} | 好感: ${affinity}/100`
+        if (f.gender) text += ` | 性别: ${f.gender}`
+        if (f.origin) text += ` | 来历: ${f.origin}`
+        if (f.dialogueTone) text += ` | 性格: ${f.dialogueTone}`
+        if (f.personalityTags?.length) text += ` | 标签: ${f.personalityTags.join('、')}`
+        if (f.appearance) text += ` | 外貌: ${f.appearance}`
+        if (f.currentAttire) text += ` | 衣着: ${f.currentAttire}`
+        if (f.dialogueExamples) text += `\n说话风格参考（勿照搬）: ${f.dialogueExamples}`
+        return text
+      }).join('\n\n')
     : '无'
 
   // 物品栏
@@ -139,7 +153,8 @@ ${beatProgress}
 - npcAffinityChanges 只包含本次对话中有变化的 NPC，没有变化就设为 {}
 - 保持世界的内部一致性——记住之前发生的事
 - 不要代替玩家做选择
-- 不要输出"未完待续"这类元叙述`
+- 不要输出"未完待续"这类元叙述
+- **NPC 对话约束：** 你为 NPC 编写的对话必须严格遵循该 NPC 的"性格"和"说话风格参考"中给的示例。你可以模仿风格但不能照搬原句。NPC 之间的说话方式必须有区别。请不要代替 NPC 说长段独白——NPC 的回应应当简洁自然，像真实对话。`
 }
 
 function parseAIResponse(text: string): AIResponse {
@@ -270,6 +285,7 @@ export async function POST(request: NextRequest) {
       playerState: PlayerState
       dialogueHistory: DialogueEntry[]
       npcAffinities?: Record<string, number>
+      npcRuntime?: Record<string, { currentSelfPerception: string; currentState: string }>
       apiKey?: string
       provider?: Provider
       model?: string
@@ -282,7 +298,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = getApiKey(requestApiKey)
     const provider = requestProvider || detectProvider(apiKey)
-    const systemPrompt = buildSystemPrompt(worldCard, playerState, npcAffinities ?? {})
+    const systemPrompt = buildSystemPrompt(worldCard, playerState, npcAffinities ?? {}, body.npcRuntime ?? {})
 
     // 带超时的 API 调用
     const controller = new AbortController()

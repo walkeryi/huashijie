@@ -15,8 +15,8 @@ function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
       { key: 'wisdom', name: '智慧', icon: '🧠', initial: 5, max: 10 },
     ],
     npcs: [
-      { id: 'blacksmith', name: '铁匠老王', description: '村里的铁匠', initialAffinity: 50 },
-      { id: 'mage', name: '法师艾琳', description: '神秘的法师', initialAffinity: 30 },
+      { id: 'blacksmith', isMainCharacter: false, fields: { name: '铁匠老王', initialAffinity: 50, gender: '男', origin: '村里的铁匠', dialogueTone: '粗犷', id: 'blacksmith', isMainCharacter: false, birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
+      { id: 'mage', isMainCharacter: false, fields: { name: '法师艾琳', initialAffinity: 30, gender: '女', origin: '神秘的法师', dialogueTone: '神秘', id: 'mage', isMainCharacter: false, birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
     ],
     flags: ['found_allies', 'betrayed_king'],
     startingItems: ['rusty_key'],
@@ -131,7 +131,7 @@ describe('buildSystemPrompt', () => {
     it('shows NPC affinities from the world card', () => {
       const card = makeWorldCard({
         npcs: [
-          { id: 'blacksmith', name: '铁匠老王', description: '', initialAffinity: 50 },
+          { id: 'blacksmith', isMainCharacter: false, fields: { id: 'blacksmith', isMainCharacter: false, name: '铁匠老王', initialAffinity: 50, gender: '男', origin: '', dialogueTone: '粗犷', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
         ],
       })
       const prompt = buildSystemPrompt(card, makePlayerState(), { blacksmith: 45 })
@@ -143,7 +143,7 @@ describe('buildSystemPrompt', () => {
     it('uses initial affinity when npcAffinities entry is missing', () => {
       const card = makeWorldCard({
         npcs: [
-          { id: 'blacksmith', name: '铁匠老王', description: '', initialAffinity: 50 },
+          { id: 'blacksmith', isMainCharacter: false, fields: { id: 'blacksmith', isMainCharacter: false, name: '铁匠老王', initialAffinity: 50, gender: '男', origin: '', dialogueTone: '粗犷', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
         ],
       })
       const prompt = buildSystemPrompt(card, makePlayerState(), {})
