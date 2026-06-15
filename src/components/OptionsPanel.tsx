@@ -55,20 +55,20 @@ export default function OptionsPanel() {
 
   const [freeInput, setFreeInput] = useState('')
   const [visible, setVisible] = useState(false)
-  const [prevOptionCount, setPrevOptionCount] = useState(0)
   const freeInputRef = useRef<HTMLInputElement>(null)
+  const prevOptionsRef = useRef(currentOptions)
 
   // Delayed appearance: when new options arrive, wait 800ms then fade in
   useEffect(() => {
-    if (currentOptions.length > 0 && currentOptions.length !== prevOptionCount) {
+    if (currentOptions.length > 0 && currentOptions !== prevOptionsRef.current) {
+      prevOptionsRef.current = currentOptions
       setVisible(false)
       const timer = setTimeout(() => {
         setVisible(true)
       }, 800)
-      setPrevOptionCount(currentOptions.length)
       return () => clearTimeout(timer)
     }
-  }, [currentOptions, prevOptionCount])
+  }, [currentOptions])
 
   // Focus free text input when options appear
   useEffect(() => {

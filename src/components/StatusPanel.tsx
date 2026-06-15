@@ -2,18 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useGame } from '@/lib/game-context'
-
-/** Read save data for a specific slot directly from localStorage */
-function getSlotSave(slot: number): { slotName: string; timestamp: number } | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = localStorage.getItem(`adventure_save_${slot}`)
-    if (!raw) return null
-    return JSON.parse(raw)
-  } catch {
-    return null
-  }
-}
+import { loadSave } from '@/lib/storage'
 
 export default function StatusPanel() {
   const { state, actions } = useGame()
@@ -35,7 +24,7 @@ export default function StatusPanel() {
 
   const handleSaveClick = (slot: number) => {
     setActiveSaveSlot(slot)
-    const existing = getSlotSave(slot)
+    const existing = loadSave(slot)
     setSaveNameInput(existing?.slotName || `存档 ${slot}`)
   }
 
@@ -117,7 +106,7 @@ export default function StatusPanel() {
         {showSaveUI && (
           <div className="mt-3 space-y-2 animate-fadeIn">
             {[1, 2, 3].map((slot) => {
-              const slotInfo = getSlotSave(slot)
+              const slotInfo = loadSave(slot)
               const isActive = activeSaveSlot === slot
 
               return (
