@@ -27,7 +27,7 @@ function clampAttributes(
 
 // ========== 初始状态 ==========
 
-function createInitialState(): GameState {
+export function createInitialState(): GameState {
   return {
     screen: 'menu',
     worldCard: null,
@@ -43,7 +43,7 @@ function createInitialState(): GameState {
 
 // ========== Reducer ==========
 
-function gameReducer(state: GameState, action: GameAction): GameState {
+export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START_GAME': {
       const attrs: Record<string, number> = {}
