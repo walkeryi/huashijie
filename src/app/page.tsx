@@ -18,7 +18,7 @@ export default function HomePage() {
   const [selectedCard, setSelectedCard] = useState<WorldCard | null>(null)
   const [playerName, setPlayerName] = useState('')
   const [customCards, setCustomCards] = useState<WorldCard[]>([])
-  const [saveSlots, setSaveSlots] = useState<SaveData[]>([])
+  const saveSlots = state.saveSlots
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   const allCards = [...presetWorldCards, ...customCards]
@@ -31,9 +31,8 @@ export default function HomePage() {
   useEffect(() => {
     if (screen === 'loads') {
       actions.refreshSaves()
-      setSaveSlots(state.saveSlots)
     }
-  }, [screen, actions])
+  }, [screen])
 
   // 选中卡片时聚焦名字输入
   useEffect(() => {
@@ -82,7 +81,6 @@ export default function HomePage() {
         if (loaded?.id === save.id) { await saveService.deleteSave(s); break }
       }
       actions.refreshSaves()
-      setSaveSlots(prev => prev.filter(s => s.id !== save.id))
     } catch {}
   }
 
@@ -107,7 +105,6 @@ export default function HomePage() {
           <button
             onClick={async () => {
               await actions.refreshSaves()
-              setSaveSlots(state.saveSlots)
               setScreen('loads')
             }}
             className="w-full py-4 rounded-xl border-2 border-[var(--border)] text-[var(--text-primary)] font-medium text-lg hover:border-[var(--accent)] hover:bg-[var(--bg-card)] transition-colors"
