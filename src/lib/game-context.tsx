@@ -476,6 +476,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return
     const provider = loadLastProvider()
     const saved = loadApiConfigForProvider(provider)
+    console.log('[API] 启动加载:', provider, saved.apiKey ? 'key='+saved.apiKey.slice(0,12)+'...' : '无key')
     if (saved.apiKey) {
       dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
     }
@@ -486,7 +487,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
-    if (!apiInitRef.current) { apiInitRef.current = true; return }
+    if (!apiInitRef.current) { apiInitRef.current = true; console.log('[API] 跳过首次渲染'); return }
+    console.log('[API] 自动保存:', state.provider, state.apiKey.slice(0,12)+'...')
     const configs = loadAllApiConfigs()
     delete configs['undefined']; delete configs['null']
     configs[state.provider] = { apiKey: state.apiKey, model: state.model, customBaseURL: state.customBaseURL }
