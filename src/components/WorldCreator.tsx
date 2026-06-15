@@ -255,15 +255,14 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   }
 
   const getVisibleKeys = (npc: NPCDef): string[] => {
-    // 预设字段：排除 isMainCharacter 和被标记删除的
-    const preset = PRESET_NPC_FIELDS
-      .map(f => f.key)
-      .filter(k => k !== 'isMainCharacter' && !npc.fields['_rm_' + k])
-    // 自定义字段
+    const allPreset = PRESET_NPC_FIELDS.map(f => f.key).filter(k => k !== 'isMainCharacter' && !npc.fields['_rm_' + k])
+    // 核心优先，再预设非核心，最后玩家自定义
+    const core = allPreset.filter(k => isCoreField(k))
+    const presetOther = allPreset.filter(k => !isCoreField(k))
     const custom = Object.keys(npc.fields).filter(k =>
       k !== '_customMeta' && !k.startsWith('_rm_') && !PRESET_NPC_FIELDS.some(f => f.key === k)
     )
-    return [...preset, ...custom]
+    return [...core, ...presetOther, ...custom]
   }
 
   const renderFieldRow = (npc: NPCDef, fieldKey: string) => {
