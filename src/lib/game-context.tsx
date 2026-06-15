@@ -2,9 +2,28 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react'
 import {
-  GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState,
+  GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState, AttributeDef,
 } from './types'
 import { listSaves, saveToSlot, autoSave, deleteSave } from './storage'
+
+const DEFAULT_MAX_ATTRIBUTE = 10
+
+// ========== 工具函数 ==========
+
+function clampAttributes(
+  base: Record<string, number>,
+  changes: Record<string, number>,
+  defs: AttributeDef[],
+): Record<string, number> {
+  const result = { ...base }
+  for (const [key, delta] of Object.entries(changes)) {
+    if (key in result) {
+      const maxVal = defs.find(a => a.key === key)?.max ?? DEFAULT_MAX_ATTRIBUTE
+      result[key] = Math.max(0, Math.min(result[key] + delta, maxVal))
+    }
+  }
+  return result
+}
 
 // ========== 初始状态 ==========
 
@@ -64,13 +83,11 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         },
       ]
 
-      const newAttrs = { ...state.playerState!.attributes }
-      for (const [key, delta] of Object.entries(response.attributeChanges)) {
-        if (key in newAttrs) {
-          const maxVal = state.worldCard!.attributes.find(a => a.key === key)?.max ?? 10
-          newAttrs[key] = Math.max(0, Math.min(newAttrs[key] + delta, maxVal))
-        }
-      }
+      const newAttrs = clampAttributes(
+        state.playerState!.attributes,
+        response.attributeChanges,
+        state.worldCard!.attributes,
+      )
 
       return {
         ...state,
@@ -134,6 +151,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, undefined, createInitialState)
   const stateRef = useRef(state)
   stateRef.current = state
+  const submittingRef = useRef(false)
 
   const refreshSaves = useCallback(() => {
     dispatch({ type: 'REFRESH_SAVES', saves: listSaves() })
@@ -144,9 +162,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const submitAction = useCallback(async (optionText: string) => {
+    if (submittingRef.current) return
     const current = stateRef.current
     if (!current.worldCard || !current.playerState) return
 
+    submittingRef.current = true
     dispatch({ type: 'SET_LOADING', isLoading: true })
 
     const playerEntry: DialogueEntry = {
@@ -176,14 +196,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const data: AIResponse = await res.json()
 
-      // Apply attribute changes
-      const newAttrs = { ...current.playerState.attributes }
-      for (const [key, delta] of Object.entries(data.attributeChanges)) {
-        if (key in newAttrs) {
-          const maxVal = current.worldCard!.attributes.find(a => a.key === key)?.max ?? 10
-          newAttrs[key] = Math.max(0, Math.min(newAttrs[key] + delta, maxVal))
-        }
-      }
+      const newAttrs = clampAttributes(
+        current.playerState.attributes,
+        data.attributeChanges,
+        current.worldCard!.attributes,
+      )
 
       dispatch({
         type: 'SET_RESPONSE',
@@ -203,8 +220,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         timestamp: Date.now(),
       }]
       autoSave(current.worldCard.id, updatedPlayer, fullHistory)
-    } catch (e: any) {
-      dispatch({ type: 'SET_ERROR', error: e.message || '未知错误' })
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e)
+      dispatch({ type: 'SET_ERROR', error: message || '未知错误' })
+    } finally {
+      submittingRef.current = false
     }
   }, [])
 
@@ -219,7 +239,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'LOAD_SAVE', save, worldCard })
   }, [])
 
-  const deleteGameAction = useCallback((slot: number) => {
+  const deleteGame = useCallback((slot: number) => {
     deleteSave(slot)
     refreshSaves()
   }, [refreshSaves])
@@ -240,7 +260,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       submitAction,
       saveGame,
       loadGame,
-      deleteGame: deleteGameAction,
+      deleteGame,
       refreshSaves,
       returnToMenu,
     },
