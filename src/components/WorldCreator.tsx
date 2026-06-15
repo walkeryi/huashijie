@@ -55,7 +55,10 @@ export default function WorldCreator() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold">✨ 创作台</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">✨ 创作台</h1>
+            <a href="/docs/玩家创作指南.md" target="_blank" className="text-xs text-[var(--accent)] hover:underline border border-[var(--accent)]/30 px-2 py-0.5 rounded-full">📖 创作指南</a>
+          </div>
           <div className="flex gap-2">
             <button onClick={handleSave} className="px-4 py-2 rounded-xl bg-[var(--accent)] text-black text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">
               {saved ? '✅ 已保存' : '💾 保存'}
