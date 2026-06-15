@@ -27,13 +27,53 @@ function clampAttributes(
 
 // ========== 初始状态 ==========
 
-function loadApiConfig(): { apiKey: string; provider: GameState['provider']; model: string; customBaseURL: string } {
-  if (typeof window === 'undefined') return { apiKey: '', provider: 'anthropic', model: 'claude-sonnet-4-6', customBaseURL: '' }
+type ApiProvider = 'anthropic' | 'openai' | 'deepseek' | 'custom'
+
+interface SavedApiConfig {
+  apiKey: string
+  model: string
+  customBaseURL: string
+}
+
+const API_CONFIGS_KEY = 'adventure_api_configs'
+
+function loadAllApiConfigs(): Record<string, SavedApiConfig> {
+  if (typeof window === 'undefined') return {}
   try {
-    const raw = localStorage.getItem('adventure_api_config')
+    const raw = localStorage.getItem(API_CONFIGS_KEY)
     if (raw) return JSON.parse(raw)
-  } catch { /* ignore */ }
-  return { apiKey: '', provider: 'anthropic', model: 'claude-sonnet-4-6', customBaseURL: '' }
+  } catch {}
+  return {}
+}
+
+function saveAllApiConfigs(configs: Record<string, SavedApiConfig>): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(API_CONFIGS_KEY, JSON.stringify(configs))
+}
+
+function loadApiConfigForProvider(provider: ApiProvider): SavedApiConfig {
+  const configs = loadAllApiConfigs()
+  const defaults: Record<ApiProvider, SavedApiConfig> = {
+    anthropic: { apiKey: '', model: 'claude-sonnet-4-6', customBaseURL: '' },
+    openai: { apiKey: '', model: 'gpt-4o', customBaseURL: '' },
+    deepseek: { apiKey: '', model: 'deepseek-chat', customBaseURL: '' },
+    custom: { apiKey: '', model: '', customBaseURL: '' },
+  }
+  return { ...defaults[provider], ...configs[provider] }
+}
+
+function loadLastProvider(): ApiProvider {
+  if (typeof window === 'undefined') return 'deepseek'
+  try {
+    const raw = localStorage.getItem('adventure_last_provider')
+    if (raw) return raw as ApiProvider
+  } catch {}
+  return 'deepseek'
+}
+
+function saveLastProvider(provider: ApiProvider): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem('adventure_last_provider', provider)
 }
 
 function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: string } {
@@ -42,7 +82,8 @@ function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: s
 }
 
 export function createInitialState(): GameState {
-  const saved = loadApiConfig()
+  const provider = loadLastProvider()
+  const saved = loadApiConfigForProvider(provider)
   const saveCfg = loadSaveModeConfig()
   return {
     screen: 'menu',
@@ -55,7 +96,7 @@ export function createInitialState(): GameState {
     error: null,
     saveSlots: [],
     apiKey: saved.apiKey,
-    provider: saved.provider,
+    provider: provider as GameState['provider'],
     model: saved.model,
     customBaseURL: saved.customBaseURL,
     npcAffinities: {},
@@ -98,7 +139,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, apiKey: action.apiKey }
 
     case 'SET_PROVIDER':
-      return { ...state, provider: action.provider }
+      return {
+        ...state,
+        provider: action.provider,
+        ...(action.apiKey !== undefined ? { apiKey: action.apiKey } : {}),
+        ...(action.model !== undefined ? { model: action.model } : {}),
+        ...(action.customBaseURL !== undefined ? { customBaseURL: action.customBaseURL } : {}),
+      }
 
     case 'SET_MODEL':
       return { ...state, model: action.model }
@@ -264,7 +311,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek' | 'custom') => {
-    dispatch({ type: 'SET_PROVIDER', provider })
+    const saved = loadApiConfigForProvider(provider)
+    dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
   }, [])
 
   const setModel = useCallback((model: string) => {
@@ -406,16 +454,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     refreshSaves()
   }, [refreshSaves])
 
-  // 持久化 API 配置到 localStorage
+  // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('adventure_api_config', JSON.stringify({
-        apiKey: state.apiKey,
-        provider: state.provider,
-        model: state.model,
-        customBaseURL: state.customBaseURL,
-      }))
+    if (typeof window === 'undefined') return
+    const configs = loadAllApiConfigs()
+    configs[state.provider] = {
+      apiKey: state.apiKey,
+      model: state.model,
+      customBaseURL: state.customBaseURL,
     }
+    saveAllApiConfigs(configs)
+    saveLastProvider(state.provider)
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
 
   const value: GameContextValue = useMemo(() => ({
