@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGame } from '@/lib/game-context'
 import { presetWorldCards } from '@/data/world-cards'
-import { listSaves } from '@/lib/storage'
+import { listSaves, clearAllSaves } from '@/lib/storage'
 import { WorldCard, SaveData } from '@/lib/types'
 
 export default function WorldCardSelector() {
@@ -98,6 +98,15 @@ export default function WorldCardSelector() {
                 </button>
               ))}
             </div>
+          )}
+
+          {saves.length > 0 && (
+            <button
+              onClick={() => { if (confirm('确定删除所有存档？此操作不可恢复。')) { clearAllSaves(); actions.refreshSaves(); } }}
+              className="w-full py-3 mb-2 rounded-lg border border-red-800 text-red-400 hover:bg-red-900/20 transition-colors cursor-pointer text-sm"
+            >
+              🗑️ 清除所有存档
+            </button>
           )}
 
           <button

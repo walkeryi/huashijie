@@ -87,6 +87,18 @@ export function deleteSave(slot: number): void {
   localStorage.removeItem(SAVE_PREFIX + slot)
 }
 
+/** 清除所有存档 */
+export function clearAllSaves(): void {
+  if (typeof window === 'undefined') return
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && (key.startsWith(SAVE_PREFIX) || key === AUTO_SAVE_KEY)) {
+      localStorage.removeItem(key)
+      i-- // 删除后索引回退
+    }
+  }
+}
+
 /** 获取存档摘要文本 */
 export function getSaveSummary(save: SaveData): string {
   const lastEntry = save.dialogueHistory[save.dialogueHistory.length - 1]
