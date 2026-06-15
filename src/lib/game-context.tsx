@@ -43,6 +43,23 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
     const raw = localStorage.getItem(API_CONFIGS_KEY)
     if (raw) return JSON.parse(raw)
   } catch {}
+  // 迁移旧格式 adventure_api_config → adventure_api_configs
+  try {
+    const old = localStorage.getItem('adventure_api_config')
+    if (old) {
+      const parsed = JSON.parse(old)
+      const configs: Record<string, SavedApiConfig> = {}
+      const provider = parsed.provider || 'deepseek'
+      configs[provider] = {
+        apiKey: parsed.apiKey || '',
+        model: parsed.model || '',
+        customBaseURL: parsed.customBaseURL || '',
+      }
+      localStorage.setItem(API_CONFIGS_KEY, JSON.stringify(configs))
+      localStorage.removeItem('adventure_api_config')
+      return configs
+    }
+  } catch {}
   return {}
 }
 
