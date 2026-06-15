@@ -157,18 +157,73 @@ ${beatProgress}
 - **NPC 对话约束：** 你为 NPC 编写的对话必须严格遵循该 NPC 的"性格"和"说话风格参考"中给的示例。你可以模仿风格但不能照搬原句。NPC 之间的说话方式必须有区别。请不要代替 NPC 说长段独白——NPC 的回应应当简洁自然，像真实对话。`
 }
 
-function parseAIResponse(text: string): AIResponse {
-  try {
-    return JSON.parse(text.trim()) as AIResponse
-  } catch {
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[1].trim()) as AIResponse
+function extractJsonFromText(text: string): string | null {
+  const firstBrace = text.indexOf('{')
+  if (firstBrace === -1) return null
+
+  let depth = 0
+  let inString = false
+  let escaped = false
+
+  for (let i = firstBrace; i < text.length; i++) {
+    const ch = text[i]
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+
+    if (ch === '\\' && inString) {
+      escaped = true
+      continue
+    }
+
+    if (ch === '"') {
+      inString = !inString
+      continue
+    }
+
+    if (inString) continue
+
+    if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) {
+        return text.substring(firstBrace, i + 1)
+      }
     }
   }
 
+  return null
+}
+
+function parseAIResponse(text: string): AIResponse {
+  const trimmed = text.trim()
+
+  // 1. 直接解析纯 JSON
+  try {
+    return JSON.parse(trimmed) as AIResponse
+  } catch {}
+
+  // 2. 从 markdown 代码块提取
+  try {
+    const jsonMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim()) as AIResponse
+    }
+  } catch {}
+
+  // 3. 从混合文本中提取 JSON 对象（处理 AI 在 JSON 前后附加文字的情况）
+  const extracted = extractJsonFromText(trimmed)
+  if (extracted) {
+    try {
+      return JSON.parse(extracted) as AIResponse
+    } catch {}
+  }
+
+  // 4. 兜底：整段文本作为 narration
   return {
-    narration: text.trim(),
+    narration: trimmed,
     options: [
       { text: '继续前进' },
       { text: '仔细观察周围' },
