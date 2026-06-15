@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useGame } from '@/lib/game-context'
 import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 
@@ -10,6 +10,21 @@ export default function SystemSettings() {
   const { state, actions } = useGame()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabType>('theme')
+
+  // 持续监控 apiKey
+  const keyRef = useRef(state.apiKey)
+  useEffect(() => {
+    const old = keyRef.current
+    const now = state.apiKey
+    if (old !== now) {
+      console.log('[监控] apiKey变化 长度:', now.length, '内容:', now.slice(0,20)+(now.length>20?'...':''), 'provider:', state.provider)
+      keyRef.current = now
+    }
+  })
+  // 监控 open 状态
+  useEffect(() => {
+    console.log('[监控] 设置面板:', open ? '打开了' : '关闭了', '当前apiKey:', state.apiKey.slice(0,20)+(state.apiKey.length>20?'...':''))
+  }, [open])
 
   // API
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
