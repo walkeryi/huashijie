@@ -8,12 +8,19 @@ const mockSetModel = vi.fn()
 const mockSetCustomBaseURL = vi.fn()
 
 let mockState: any
+const mockDispatch = vi.fn()
+
+vi.mock('@lobehub/icons', () => ({
+  ModelIcon: ({ model, size }: { model: string; size: number }) =>
+    <span data-testid="model-icon" data-model={model} data-size={size}>Icon</span>,
+}))
 
 vi.mock('@/lib/game-context', async () => {
   const actual = await vi.importActual('@/lib/game-context')
   return {
     ...actual,
     useGame: () => ({
+      dispatch: mockDispatch,
       state: mockState,
       actions: {
         setApiKey: mockSetApiKey,
@@ -44,8 +51,12 @@ function setupState(overrides?: Partial<any>) {
   mockState = {
     apiKey: 'sk-test-key-12345',
     provider: 'deepseek',
+    providerName: 'DeepSeek',
     model: 'deepseek-chat',
     customBaseURL: '',
+    apiBaseURL: 'https://api.deepseek.com',
+    protocol: 'openai',
+    advancedParams: {},
     ...overrides,
   }
 }
