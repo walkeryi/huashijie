@@ -142,8 +142,8 @@ export default function HomePage() {
             <p className="text-center text-[var(--text-secondary)] mb-6">没有找到存档</p>
           ) : (
             <div className="space-y-3 mb-6">
-              {saveSlots.map((save) => (
-                <div key={save.id} className="flex gap-2">
+              {saveSlots.map((save, i) => (
+                <div key={save.id || `save-${i}`} className="flex gap-2">
                   <button
                     onClick={() => handleLoadSave(save)}
                     className="flex-1 text-left p-4 rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)] transition-colors"
@@ -187,11 +187,11 @@ export default function HomePage() {
 
         {/* 世界卡片网格 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {allCards.map((card) => {
+          {allCards.map((card, i) => {
             const isSelected = selectedCard?.id === card.id
             const isCustom = card.id.startsWith('custom_')
             return (
-              <div key={card.id} className="relative">
+              <div key={card.id || `card-${i}`} className="relative">
                 <button
                   onClick={() => handleCardSelect(card)}
                   className={`w-full text-left p-6 rounded-xl border-2 transition-all duration-200 ${
