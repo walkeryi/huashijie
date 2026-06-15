@@ -2,47 +2,71 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useGame } from '@/lib/game-context'
-import { GameOption } from '@/lib/types'
+import { GameOption, GameState } from '@/lib/types'
 
-/**
- * Check if a set of attribute checks passes against the player's current attributes.
- * Supports operators: >=, >, <=, <, ==, !=
- * Format: "courage >= 3"
- */
-function checkCondition(
-  checks: Record<string, string> | undefined,
-  attrs: Record<string, number>,
-): boolean {
-  if (!checks) return true
+function evalCondition(val: number, condition: string): boolean {
+  const match = condition.trim().match(/^([><=!]+)\s*(-?\d+)$/)
+  if (!match) return true
+  const [, op, numStr] = match
+  const target = parseInt(numStr, 10)
+  switch (op) {
+    case '>=': return val >= target
+    case '>': return val > target
+    case '<=': return val <= target
+    case '<': return val < target
+    case '==': return val === target
+    case '!=': return val !== target
+    default: return true
+  }
+}
 
-  for (const [key, expr] of Object.entries(checks)) {
-    const trimmed = expr.trim()
-    const match = trimmed.match(/^(\>=|\>|\<=|\<|==|!=)\s*(\d+)$/)
-    if (!match) continue
+function checkOption(option: GameOption, state: GameState): boolean {
+  const attrs = state.playerState?.attributes ?? {}
+  const npcAffs = state.npcAffinities ?? {}
+  const flags = state.playerState?.flags ?? {}
+  const inventory = state.playerState?.inventory ?? []
 
-    const operator = match[1]
-    const value = parseInt(match[2], 10)
-    const playerVal = attrs[key] ?? 0
+  // attributeChecks
+  if (option.attributeChecks) {
+    for (const [key, condition] of Object.entries(option.attributeChecks)) {
+      const val = attrs[key] ?? 0
+      if (!evalCondition(val, condition)) return false
+    }
+  }
 
-    switch (operator) {
-      case '>=':
-        if (!(playerVal >= value)) return false
-        break
-      case '>':
-        if (!(playerVal > value)) return false
-        break
-      case '<=':
-        if (!(playerVal <= value)) return false
-        break
-      case '<':
-        if (!(playerVal < value)) return false
-        break
-      case '==':
-        if (!(playerVal === value)) return false
-        break
-      case '!=':
-        if (!(playerVal !== value)) return false
-        break
+  // npcAffinityChecks
+  if (option.npcAffinityChecks) {
+    for (const [key, condition] of Object.entries(option.npcAffinityChecks)) {
+      const val = npcAffs[key] ?? 0
+      if (!evalCondition(val, condition)) return false
+    }
+  }
+
+  // flagChecks — all must be true
+  if (option.flagChecks) {
+    for (const flag of option.flagChecks) {
+      if (!flags[flag]) return false
+    }
+  }
+
+  // flagNot — none can be true
+  if (option.flagNot) {
+    for (const flag of option.flagNot) {
+      if (flags[flag]) return false
+    }
+  }
+
+  // itemChecks — all must be in inventory
+  if (option.itemChecks) {
+    for (const item of option.itemChecks) {
+      if (!inventory.includes(item)) return false
+    }
+  }
+
+  // itemNot — none can be in inventory
+  if (option.itemNot) {
+    for (const item of option.itemNot) {
+      if (inventory.includes(item)) return false
     }
   }
 
@@ -100,15 +124,13 @@ export default function OptionsPanel() {
     return null
   }
 
-  const attrs = playerState?.attributes ?? {}
-
   return (
     <div className="space-y-3">
       {/* Options - only show when visible (after delay) */}
       {visible && currentOptions.length > 0 && (
         <div className="animate-fadeIn space-y-2">
           {currentOptions.map((option, index) => {
-            const meetsConditions = checkCondition(option.attributeChecks, attrs)
+            const meetsConditions = checkOption(option, state)
 
             return (
               <button
