@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { useGame } from '@/lib/game-context'
 import { loadSave } from '@/lib/storage'
+import NPCPanel from './NPCPanel'
+import InventoryPanel from './InventoryPanel'
+import FlagPanel from './FlagPanel'
 
 export default function StatusPanel() {
   const { state, actions } = useGame()
@@ -12,6 +15,9 @@ export default function StatusPanel() {
   const [saveNameInput, setSaveNameInput] = useState('')
   const [activeSaveSlot, setActiveSaveSlot] = useState<number | null>(null)
   const saveInputRef = useRef<HTMLInputElement>(null)
+  const [showNPC, setShowNPC] = useState(false)
+  const [showInv, setShowInv] = useState(false)
+  const [showFlag, setShowFlag] = useState(false)
 
   // Focus save name input when active
   useEffect(() => {
@@ -172,6 +178,24 @@ export default function StatusPanel() {
       >
         🚪 退出
       </button>
+
+      {/* Popup Buttons */}
+      <div className="flex gap-2 border-t border-[var(--border)] pt-3">
+        <button onClick={() => setShowNPC(true)} className="flex-1 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm" title="NPC 关系">
+          👤
+        </button>
+        <button onClick={() => setShowInv(true)} className="flex-1 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm" title="物品栏">
+          🎒
+        </button>
+        <button onClick={() => setShowFlag(true)} className="flex-1 py-2 rounded-lg bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm" title="旗标">
+          🏳️
+        </button>
+      </div>
+
+      {/* Popups */}
+      <NPCPanel open={showNPC} onClose={() => setShowNPC(false)} npcs={worldCard?.npcs ?? []} affinities={state.npcAffinities} />
+      <InventoryPanel open={showInv} onClose={() => setShowInv(false)} inventory={playerState?.inventory ?? []} />
+      <FlagPanel open={showFlag} onClose={() => setShowFlag(false)} flags={playerState?.flags ?? {}} />
     </div>
   )
 }
