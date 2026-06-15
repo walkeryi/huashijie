@@ -488,6 +488,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === 'undefined') return
     if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
     if (!apiInitRef.current) { apiInitRef.current = true; console.log('[API] 跳过首次渲染'); return }
+    // 不自动保存太短的 key（防止误操作覆盖）
+    if (state.apiKey && state.apiKey.length < 10) { console.log('[API] key太短，不保存'); return }
     console.log('[API] 自动保存:', state.provider, state.apiKey.slice(0,12)+'...')
     const configs = loadAllApiConfigs()
     delete configs['undefined']; delete configs['null']

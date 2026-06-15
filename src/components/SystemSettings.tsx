@@ -173,7 +173,7 @@ export default function SystemSettings() {
           <div className="px-6 py-6 space-y-3">
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
-              <input type="password" value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
+              <input type="text" value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
                 placeholder="sk-..."
                 style={{
                   border: 'var(--border-width) var(--border-style) var(--border)',
@@ -181,7 +181,7 @@ export default function SystemSettings() {
                   background: 'var(--bg-card)',
                   color: 'var(--text-primary)',
                 }}
-                className="w-full px-4 py-2.5 outline-none text-sm placeholder:text-[var(--text-secondary)] focus:border-[var(--accent)]" />
+                className="w-full px-4 py-2.5 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
             </div>
 
             <div className="flex gap-2">
