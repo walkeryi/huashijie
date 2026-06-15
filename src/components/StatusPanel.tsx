@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useGame } from '@/lib/game-context'
-import { loadSave } from '@/lib/storage'
+import * as saveService from '@/lib/save-service'
 import NPCPanel from './NPCPanel'
 import InventoryPanel from './InventoryPanel'
 import FlagPanel from './FlagPanel'
@@ -18,6 +18,8 @@ export default function StatusPanel() {
   const [showNPC, setShowNPC] = useState(false)
   const [showInv, setShowInv] = useState(false)
   const [showFlag, setShowFlag] = useState(false)
+  const [slotInfos, setSlotInfos] = useState<Record<number, { slotName: string; timestamp: number } | null>>({})
+  const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Focus save name input when active
   useEffect(() => {
@@ -26,20 +28,40 @@ export default function StatusPanel() {
     }
   }, [activeSaveSlot])
 
+  // Load save slot info when save UI is shown
+  useEffect(() => {
+    if (showSaveUI) {
+      setLoadingSlots(true)
+      const loadSlots = async () => {
+        const infos: Record<number, { slotName: string; timestamp: number } | null> = {}
+        for (const slot of [1, 2, 3]) {
+          const save = await saveService.loadSave(slot)
+          infos[slot] = save ? { slotName: save.slotName, timestamp: save.timestamp } : null
+        }
+        setSlotInfos(infos)
+        setLoadingSlots(false)
+      }
+      loadSlots()
+    }
+  }, [showSaveUI])
+
   if (!playerState || !worldCard) return null
 
-  const handleSaveClick = (slot: number) => {
+  const handleSaveClick = async (slot: number) => {
     setActiveSaveSlot(slot)
-    const existing = loadSave(slot)
-    setSaveNameInput(existing?.slotName || `存档 ${slot}`)
+    const save = await saveService.loadSave(slot)
+    setSaveNameInput(save?.slotName || `存档 ${slot}`)
   }
 
-  const handleSaveConfirm = () => {
+  const handleSaveConfirm = async () => {
     if (activeSaveSlot === null) return
     const name = saveNameInput.trim() || `存档 ${activeSaveSlot}`
-    actions.saveGame(activeSaveSlot, name)
+    await actions.saveGame(activeSaveSlot, name)
     setActiveSaveSlot(null)
     setSaveNameInput('')
+    // 刷新槽位信息
+    const save = await saveService.loadSave(activeSaveSlot)
+    setSlotInfos(prev => ({ ...prev, [activeSaveSlot]: save ? { slotName: save.slotName, timestamp: save.timestamp } : null }))
   }
 
   const handleSaveKeyDown = (e: React.KeyboardEvent) => {
@@ -105,14 +127,15 @@ export default function StatusPanel() {
           onClick={() => setShowSaveUI(!showSaveUI)}
           className="w-full py-2 rounded-lg border border-[var(--border)] text-[var(--text-primary)] text-sm hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
         >
-          💾 存档
+          {saveService.isOnline() ? '☁️' : '💾'} 存档
         </button>
 
         {/* Save Slots */}
         {showSaveUI && (
           <div className="mt-3 space-y-2 animate-fadeIn">
+            {loadingSlots && <p className="text-xs text-[var(--text-secondary)]">加载中...</p>}
             {[1, 2, 3].map((slot) => {
-              const slotInfo = loadSave(slot)
+              const slotInfo = slotInfos[slot]
               const isActive = activeSaveSlot === slot
 
               return (

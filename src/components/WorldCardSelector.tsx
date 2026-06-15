@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGame } from '@/lib/game-context'
 import { presetWorldCards } from '@/data/world-cards'
-import { listSaves } from '@/lib/storage'
+import * as saveService from '@/lib/save-service'
 import { listCustomCards, deleteCustomCard } from '@/lib/custom-cards'
 import { WorldCard, SaveData } from '@/lib/types'
 
@@ -100,18 +100,16 @@ export default function WorldCardSelector() {
                     onClick={(e) => {
                       e.stopPropagation()
                       if (!confirm(`删除「${save.slotName}」？`)) return
-                      // 根据 save.id 找到 localStorage key 并删除
-                      const keys = ['adventure_save_1', 'adventure_save_2', 'adventure_save_3', 'adventure_autosave']
-                      for (const key of keys) {
-                        try {
-                          const raw = localStorage.getItem(key)
-                          if (raw && JSON.parse(raw).id === save.id) {
-                            localStorage.removeItem(key)
+                      ;(async () => {
+                        for (let s = 0; s <= 3; s++) {
+                          const loaded = await saveService.loadSave(s)
+                          if (loaded && loaded.id === save.id) {
+                            await saveService.deleteSave(s)
                             break
                           }
-                        } catch {}
-                      }
-                      actions.refreshSaves()
+                        }
+                        actions.refreshSaves()
+                      })()
                     }}
                     className="flex-shrink-0 w-10 flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:border-red-800 hover:text-red-400 transition-colors cursor-pointer text-lg"
                     title="删除存档"
