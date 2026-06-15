@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import {
   GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState,
 } from './types'
-import { listSaves, saveToSlot, autoSave, loadSave, deleteSave } from './storage'
+import { listSaves, saveToSlot, autoSave, deleteSave } from './storage'
 
 // ========== 初始状态 ==========
 
