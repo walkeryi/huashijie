@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 话世界 (huashijie)
 
-## Getting Started
+一个基于 [Next.js](https://nextjs.org) 构建的互动冒险项目。
 
-First, run the development server:
+---
+
+## 快速开始
+
+首先，安装依赖并启动开发服务器：
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install      # 首次运行需要安装依赖
+npm run dev      # 启动开发服务器
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 [http://localhost:3000](http://localhost:3000) 在浏览器中查看。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 让朋友一起玩
 
-## Learn More
+### 方式一：同一个 WiFi（免费）
 
-To learn more about Next.js, take a look at the following resources:
+启动 `npm run dev` 后，终端会显示类似：
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+- Network: http://10.29.58.162:3000
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+把 `Network` 那个地址发给同一个 WiFi 下的朋友，他们打开浏览器就能玩。
 
-## Deploy on Vercel
+### 方式二：部署到公网（免费）
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+通过 [Vercel](https://vercel.com) 一键部署，任何人都能玩：
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. 把代码推送到你的 GitHub 仓库
+2. 打开 [vercel.com](https://vercel.com)，用 GitHub 账号登录
+3. 点击 **New Project** → 导入仓库 → 直接点 **Deploy**
+4. 部署完成后获得一个公网链接（如 `xxx.vercel.app`），发给朋友即可
+
+---
+
+## 了解更多
+
+- [Next.js 文档](https://nextjs.org/docs)
+- [Next.js 教程](https://nextjs.org/learn)
