@@ -211,7 +211,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
         </div>
 
         {/* 可滚动内容区 */}
-        <div className="overflow-y-scroll flex-1 px-6 py-6">
+        <div className="overflow-y-scroll flex-1 px-6 py-6 settings-scroll">
         {/* 主题标签 */}
         {tab === 'theme' && (
           <div className="space-y-6">
