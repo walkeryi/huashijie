@@ -237,17 +237,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const refreshSaves = useCallback(async () => {
     try {
-      const metas = await saveService.listSaveMetas()
-      const saves: SaveData[] = metas.map(m => ({
-        id: m.id,
-        slotName: m.slotName,
-        timestamp: m.timestamp,
-        worldCardId: m.worldCardId,
-        playerState: { playerName: m.playerName, attributes: {}, flags: {}, inventory: [] },
-        dialogueHistory: [],
-        apiKey: '',
-      }))
-      dispatch({ type: 'REFRESH_SAVES', saves })
+      if (saveService.isOnline()) {
+        const metas = await saveService.listSaveMetas()
+        const saves: SaveData[] = metas.map(m => ({
+          id: m.id,
+          slotName: m.slotName,
+          timestamp: m.timestamp,
+          worldCardId: m.worldCardId,
+          playerState: { playerName: m.playerName, attributes: {}, flags: {}, inventory: [] },
+          dialogueHistory: [],
+          apiKey: '',
+        }))
+        dispatch({ type: 'REFRESH_SAVES', saves })
+      } else {
+        // 离线模式：直接读取 localStorage 获取完整 SaveData
+        const { localListSaves } = await import('./local-storage')
+        dispatch({ type: 'REFRESH_SAVES', saves: localListSaves() })
+      }
     } catch {
       // 列存档失败，保持现有列表
     }

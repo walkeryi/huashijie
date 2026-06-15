@@ -4,18 +4,22 @@ import { verifyAccount, readSaveIndex, writeSaveIndex, deleteSaveData } from '@/
 export async function POST(request: NextRequest) {
   try {
     const { name, password, slot } = await request.json()
-    if (!name || !password || slot === undefined) {
-      return NextResponse.json({ ok: false, error: '缺少必要字段' }, { status: 400 })
+    if (!name || !password) {
+      return NextResponse.json({ ok: false, error: '账户名和密码不能为空' }, { status: 400 })
     }
-    if (!verifyAccount(name, password)) {
+    if (typeof slot !== 'number' || slot < 0 || slot > 3) {
+      return NextResponse.json({ ok: false, error: '无效的存档槽位' }, { status: 400 })
+    }
+    if (!verifyAccount(name.trim(), password)) {
       return NextResponse.json({ ok: false, error: '账户不存在或密码错误' }, { status: 401 })
     }
-    deleteSaveData(name, slot)
-    const index = readSaveIndex(name)
+    const accountName = name.trim()
+    deleteSaveData(accountName, slot)
+    const index = readSaveIndex(accountName)
     if (index) {
       index.slots = index.slots.filter(s => s.slot !== slot)
       index.updatedAt = Date.now()
-      writeSaveIndex(name, index)
+      writeSaveIndex(accountName, index)
     }
     return NextResponse.json({ ok: true })
   } catch {

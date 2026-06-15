@@ -8,6 +8,11 @@ async function apiCall<T>(endpoint: string, body: Record<string, unknown>): Prom
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`
+    try { const err = await res.json(); if (err.error) msg = err.error } catch {}
+    throw new Error(msg)
+  }
   const data = await res.json()
   if (!data.ok) throw new Error(data.error || '请求失败')
   return data as T

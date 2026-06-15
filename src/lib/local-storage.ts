@@ -96,9 +96,12 @@ export function localAutoSave(
 /** 读取存档 */
 export function localLoadSave(slotOrKey: number | string): SaveData | null {
   if (typeof window === 'undefined') return null
-  const key = typeof slotOrKey === 'number'
-    ? SAVE_PREFIX + slotOrKey
-    : slotOrKey === 'autosave' ? AUTO_SAVE_KEY : SAVE_PREFIX + slotOrKey
+  let key: string
+  if (typeof slotOrKey === 'number') {
+    key = slotOrKey === 0 ? AUTO_SAVE_KEY : SAVE_PREFIX + slotOrKey
+  } else {
+    key = slotOrKey === 'autosave' ? AUTO_SAVE_KEY : SAVE_PREFIX + slotOrKey
+  }
   const raw = localStorage.getItem(key)
   if (!raw) return null
   try {
@@ -111,7 +114,8 @@ export function localLoadSave(slotOrKey: number | string): SaveData | null {
 /** 删除存档 */
 export function localDeleteSave(slot: number): void {
   if (typeof window === 'undefined') return
-  localStorage.removeItem(SAVE_PREFIX + slot)
+  const key = slot === 0 ? AUTO_SAVE_KEY : SAVE_PREFIX + slot
+  localStorage.removeItem(key)
 }
 
 /** 清除所有存档 */

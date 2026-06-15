@@ -101,14 +101,18 @@ export default function WorldCardSelector() {
                       e.stopPropagation()
                       if (!confirm(`删除「${save.slotName}」？`)) return
                       ;(async () => {
-                        for (let s = 0; s <= 3; s++) {
-                          const loaded = await saveService.loadSave(s)
-                          if (loaded && loaded.id === save.id) {
-                            await saveService.deleteSave(s)
-                            break
+                        try {
+                          for (let s = 0; s <= 3; s++) {
+                            const loaded = await saveService.loadSave(s)
+                            if (loaded && loaded.id === save.id) {
+                              await saveService.deleteSave(s)
+                              break
+                            }
                           }
+                          actions.refreshSaves()
+                        } catch {
+                          // 删除失败，静默处理
                         }
-                        actions.refreshSaves()
                       })()
                     }}
                     className="flex-shrink-0 w-10 flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--bg-card)] hover:border-red-800 hover:text-red-400 transition-colors cursor-pointer text-lg"
