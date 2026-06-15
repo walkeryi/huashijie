@@ -426,6 +426,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           customBaseURL: current.customBaseURL,
           inventory: current.playerState.inventory,
           npcAffinities: current.npcAffinities,
+          advancedParams: current.advancedParams,
         }),
       })
 

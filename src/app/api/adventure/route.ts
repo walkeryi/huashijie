@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
-import { WorldCard, PlayerState, DialogueEntry, AIResponse } from '@/lib/types'
+import { WorldCard, PlayerState, DialogueEntry, AIResponse, AdvancedParams } from '@/lib/types'
 
 const API_TIMEOUT_MS = 30000
 
@@ -273,15 +273,19 @@ function buildAnthropicMessages(dialogueHistory: DialogueEntry[], worldCard: Wor
   return messages
 }
 
-async function callAnthropic(apiKey: string, systemPrompt: string, messages: Anthropic.MessageParam[], model?: string): Promise<string> {
+async function callAnthropic(apiKey: string, systemPrompt: string, messages: Anthropic.MessageParam[], model?: string, advancedParams?: AdvancedParams): Promise<string> {
   const client = new Anthropic({ apiKey })
-  const response = await client.messages.create({
+  const createParams: Record<string, any> = {
     model: model || 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: advancedParams?.max_tokens ?? 1024,
     system: systemPrompt,
     messages,
-  })
+  }
+  if (advancedParams?.temperature !== undefined) createParams.temperature = advancedParams.temperature
+  if (advancedParams?.top_p !== undefined) createParams.top_p = advancedParams.top_p
+  if (advancedParams?.top_k !== undefined) createParams.top_k = advancedParams.top_k
 
+  const response = await client.messages.create(createParams)
   const firstBlock = response.content[0]
   if (!firstBlock || firstBlock.type !== 'text') {
     throw new Error('AI 返回了非预期的响应格式')
@@ -319,14 +323,19 @@ async function callOpenAI(
   messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
   baseURL?: string,
   model?: string,
+  advancedParams?: AdvancedParams,
 ): Promise<string> {
   const client = new OpenAI({ apiKey, baseURL })
-  const response = await client.chat.completions.create({
+  const createParams: Record<string, any> = {
     model: model || 'gpt-4o',
-    max_tokens: 1024,
+    max_tokens: advancedParams?.max_tokens ?? 1024,
     messages,
-  })
+  }
+  if (advancedParams?.temperature !== undefined) createParams.temperature = advancedParams.temperature
+  if (advancedParams?.top_p !== undefined) createParams.top_p = advancedParams.top_p
+  if (advancedParams?.stream !== undefined) createParams.stream = advancedParams.stream
 
+  const response = await client.chat.completions.create(createParams)
   return response.choices[0]?.message?.content ?? ''
 }
 
@@ -335,7 +344,7 @@ async function callOpenAI(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { worldCard, playerState, dialogueHistory, npcAffinities, apiKey: requestApiKey, provider: requestProvider, model: requestModel, customBaseURL } = body as {
+    const { worldCard, playerState, dialogueHistory, npcAffinities, apiKey: requestApiKey, provider: requestProvider, model: requestModel, customBaseURL, advancedParams } = body as {
       worldCard: WorldCard
       playerState: PlayerState
       dialogueHistory: DialogueEntry[]
@@ -345,6 +354,7 @@ export async function POST(request: NextRequest) {
       provider?: Provider
       model?: string
       customBaseURL?: string
+      advancedParams?: AdvancedParams
     }
 
     if (!worldCard || !playerState || !dialogueHistory) {
@@ -365,13 +375,13 @@ export async function POST(request: NextRequest) {
 
       if (provider === 'anthropic') {
         const messages = buildAnthropicMessages(dialogueHistory, worldCard)
-        text = await callAnthropic(apiKey, systemPrompt, messages, model)
+        text = await callAnthropic(apiKey, systemPrompt, messages, model, advancedParams)
       } else {
         const baseURL = provider === 'deepseek' ? 'https://api.deepseek.com'
           : provider === 'custom' ? customBaseURL
           : undefined
         const messages = buildOpenAIMessages(dialogueHistory, worldCard, systemPrompt)
-        text = await callOpenAI(apiKey, messages, baseURL || undefined, model)
+        text = await callOpenAI(apiKey, messages, baseURL || undefined, model, advancedParams)
       }
     } finally {
       clearTimeout(timeoutId)
