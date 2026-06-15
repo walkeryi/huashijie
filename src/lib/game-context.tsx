@@ -481,14 +481,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSaves])
 
   // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
+  const apiMountedRef = useRef(false)
   useEffect(() => {
-    if (typeof window === 'undefined') { console.log('🔍 S. autoSave: SSR, skip'); return }
-    console.log('🔍 S. autoSave 触发: provider=', state.provider, 'apiKey=', state.apiKey ? state.apiKey.slice(0,15)+'...' : '(空)', 'model=', state.model)
-    // 防止空/无效 provider
-    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) {
-      console.log('🔍 S. autoSave: 无效provider, 跳过')
+    if (typeof window === 'undefined') return
+    // 首次渲染跳过（SSR hydration，state 还是空的）
+    if (!apiMountedRef.current) {
+      apiMountedRef.current = true
+      console.log('🔍 S. autoSave: 首次渲染跳过，防止覆盖')
+      // 重新从 localStorage 加载正确数据
+      const provider = loadLastProvider()
+      const saved = loadApiConfigForProvider(provider)
+      if (saved.apiKey) {
+        console.log('🔍 S. autoSave: 从localStorage恢复 apiKey=', saved.apiKey.slice(0,15)+'...')
+        dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
+      }
       return
     }
+    console.log('🔍 S. autoSave: provider=', state.provider, 'apiKey=', state.apiKey ? state.apiKey.slice(0,15)+'...' : '(空)')
+    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
     const configs = loadAllApiConfigs()
     delete configs['undefined']
     delete configs['null']
@@ -499,7 +509,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
-    console.log('🔍 S. autoSave: 已保存, 当前所有configs:', JSON.stringify(configs))
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
 
   const value: GameContextValue = useMemo(() => ({
