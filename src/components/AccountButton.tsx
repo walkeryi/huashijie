@@ -7,11 +7,14 @@ import { onlineRegister, onlineLogin } from '@/lib/online-storage'
 
 export default function AccountButton() {
   const { state, actions } = useGame()
+  const [mounted, setMounted] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
   const [accountName, setAccountName] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const isLoggedIn = saveService.isOnline() && !!saveService.getAccountName()
+
+  useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {
     if (showPanel) {
@@ -59,13 +62,15 @@ export default function AccountButton() {
       <button
         onClick={() => setShowPanel(true)}
         className="fixed top-4 right-16 z-50 h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]"
-        title={isLoggedIn ? `☁️ ${state.accountName}` : '登录云端存档'}
+        title={mounted && isLoggedIn ? `☁️ ${state.accountName}` : '登录云端存档'}
       >
-        {isLoggedIn ? (
-          <><span className="w-2 h-2 rounded-full bg-green-400" /> {state.accountName}</>
-        ) : (
-          <><span className="text-base">☁️</span> 登录</>
-        )}
+        {mounted ? (
+          isLoggedIn ? (
+            <><span className="w-2 h-2 rounded-full bg-green-400" /> {state.accountName}</>
+          ) : (
+            <><span className="text-base">☁️</span> 登录</>
+          )
+        ) : null}
       </button>
 
       {showPanel && (

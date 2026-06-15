@@ -14,11 +14,14 @@ export default function HomePage() {
   const router = useRouter()
   const { state, actions } = useGame()
 
+  const [mounted, setMounted] = useState(false)
   const [screen, setScreen] = useState<Screen>('menu')
   const [selectedCard, setSelectedCard] = useState<WorldCard | null>(null)
   const [playerName, setPlayerName] = useState('')
   const [customCards, setCustomCards] = useState<WorldCard[]>([])
   const saveSlots = state.saveSlots
+
+  useEffect(() => { setMounted(true) }, [])
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   const allCards = [...presetWorldCards, ...customCards]
@@ -114,9 +117,11 @@ export default function HomePage() {
 
         </div>
 
-        <p className="mt-12 text-xs text-[var(--text-secondary)]">
-          {saveService.isOnline() ? `☁️ 在线 · ${state.accountName}` : '💾 离线模式 · 存档保存在本地'}
-        </p>
+        {mounted && (
+          <p className="mt-12 text-xs text-[var(--text-secondary)]">
+            {saveService.isOnline() ? `☁️ 在线 · ${state.accountName}` : '💾 离线模式 · 存档保存在本地'}
+          </p>
+        )}
       </div>
     )
   }
