@@ -71,13 +71,17 @@ export interface GameState {
   error: string | null
   saveSlots: SaveData[]
   apiKey: string
-  provider: 'anthropic' | 'openai' | 'deepseek'
+  provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'
+  model: string
+  customBaseURL: string
 }
 
 export type GameAction =
   | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
   | { type: 'SET_API_KEY'; apiKey: string }
-  | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' }
+  | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' | 'custom' }
+  | { type: 'SET_MODEL'; model: string }
+  | { type: 'SET_CUSTOM_BASE_URL'; baseURL: string }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_RESPONSE'; response: AIResponse; playerEntry: DialogueEntry }
   | { type: 'SET_ERROR'; error: string }

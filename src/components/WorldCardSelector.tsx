@@ -123,7 +123,7 @@ export default function WorldCardSelector() {
         </div>
 
         {/* API Key + Provider */}
-        <div className="max-w-md mx-auto mb-8 flex gap-2">
+        <div className="max-w-md mx-auto mb-3 flex gap-2">
           <input
             type="password"
             value={state.apiKey}
@@ -133,13 +133,54 @@ export default function WorldCardSelector() {
           />
           <select
             value={state.provider}
-            onChange={e => actions.setProvider(e.target.value as 'anthropic' | 'openai' | 'deepseek')}
+            onChange={e => {
+              const p = e.target.value as 'anthropic' | 'openai' | 'deepseek' | 'custom'
+              actions.setProvider(p)
+              // 自动填入默认模型
+              const defaults: Record<string, string> = { anthropic: 'claude-sonnet-4-6', openai: 'gpt-4o', deepseek: 'deepseek-chat', custom: '' }
+              actions.setModel(defaults[p])
+            }}
             className="px-3 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] transition-colors"
           >
             <option value="anthropic">Anthropic</option>
             <option value="openai">OpenAI</option>
             <option value="deepseek">DeepSeek</option>
+            <option value="custom">自定义</option>
           </select>
+        </div>
+
+        {/* Model name */}
+        <div className="max-w-md mx-auto mb-3">
+          <input
+            type="text"
+            value={state.model}
+            onChange={e => actions.setModel(e.target.value)}
+            placeholder="模型名"
+            className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] transition-colors"
+          />
+        </div>
+
+        {/* Custom base URL — only for custom provider */}
+        {state.provider === 'custom' && (
+          <div className="max-w-md mx-auto mb-3">
+            <input
+              type="text"
+              value={state.customBaseURL}
+              onChange={e => actions.setCustomBaseURL(e.target.value)}
+              placeholder="API 地址，例如 https://api.openai.com/v1"
+              className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] transition-colors"
+            />
+          </div>
+        )}
+
+        {/* Test connection button */}
+        <div className="max-w-md mx-auto mb-8 text-center">
+          <TestConnectionButton
+            apiKey={state.apiKey}
+            provider={state.provider}
+            model={state.model}
+            customBaseURL={state.customBaseURL}
+          />
         </div>
 
         {/* World Card Grid */}
@@ -198,6 +239,57 @@ export default function WorldCardSelector() {
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+// 测试连接按钮
+function TestConnectionButton({
+  apiKey, provider, model, customBaseURL,
+}: {
+  apiKey: string; provider: string; model: string; customBaseURL: string
+}) {
+  const [status, setStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
+  const [message, setMessage] = useState('')
+
+  const handleTest = async () => {
+    if (!apiKey) { setStatus('fail'); setMessage('请先输入 API Key'); return }
+    setStatus('testing')
+    setMessage('')
+    try {
+      const res = await fetch('/api/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey, provider, model, customBaseURL }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setStatus('ok')
+        setMessage(`连接成功 · ${data.latency}ms`)
+      } else {
+        setStatus('fail')
+        setMessage(data.error || '连接失败')
+      }
+    } catch {
+      setStatus('fail')
+      setMessage('网络错误')
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 justify-center">
+      <button
+        onClick={handleTest}
+        disabled={status === 'testing'}
+        className="px-4 py-2 rounded-xl text-sm font-medium border transition-colors bg-[var(--bg-card)] border-[var(--border)] hover:border-[var(--accent)] disabled:opacity-50"
+      >
+        {status === 'testing' ? '⏳ 测试中...' : '🧪 测试连接'}
+      </button>
+      {message && (
+        <span className={`text-sm ${status === 'ok' ? 'text-green-400' : 'text-red-400'}`}>
+          {message}
+        </span>
+      )}
     </div>
   )
 }

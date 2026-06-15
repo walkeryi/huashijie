@@ -40,6 +40,8 @@ export function createInitialState(): GameState {
     saveSlots: [],
     apiKey: '',
     provider: 'anthropic',
+    model: 'claude-sonnet-4-6',
+    customBaseURL: '',
   }
 }
 
@@ -74,6 +76,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SET_PROVIDER':
       return { ...state, provider: action.provider }
+
+    case 'SET_MODEL':
+      return { ...state, model: action.model }
+
+    case 'SET_CUSTOM_BASE_URL':
+      return { ...state, customBaseURL: action.baseURL }
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading }
@@ -144,7 +152,9 @@ interface GameContextValue {
   dispatch: React.Dispatch<GameAction>
   actions: {
     setApiKey: (key: string) => void
-    setProvider: (provider: 'anthropic' | 'openai' | 'deepseek') => void
+    setProvider: (provider: 'anthropic' | 'openai' | 'deepseek' | 'custom') => void
+    setModel: (model: string) => void
+    setCustomBaseURL: (url: string) => void
     startGame: (worldCard: WorldCard, playerName: string) => void
     submitAction: (optionText: string) => Promise<void>
     saveGame: (slot: number, name: string) => void
@@ -171,8 +181,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'SET_API_KEY', apiKey: key })
   }, [])
 
-  const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek') => {
+  const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek' | 'custom') => {
     dispatch({ type: 'SET_PROVIDER', provider })
+  }, [])
+
+  const setModel = useCallback((model: string) => {
+    dispatch({ type: 'SET_MODEL', model })
+  }, [])
+
+  const setCustomBaseURL = useCallback((baseURL: string) => {
+    dispatch({ type: 'SET_CUSTOM_BASE_URL', baseURL })
   }, [])
 
   const startGame = useCallback((worldCard: WorldCard, playerName: string) => {
@@ -206,6 +224,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           dialogueHistory: historyWithInput,
           apiKey: current.apiKey,
           provider: current.provider,
+          model: current.model,
+          customBaseURL: current.customBaseURL,
         }),
       })
 
@@ -278,6 +298,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     actions: {
       setApiKey,
       setProvider,
+      setModel,
+      setCustomBaseURL,
       startGame,
       submitAction,
       saveGame,
@@ -286,7 +308,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       refreshSaves,
       returnToMenu,
     },
-  }), [state, dispatch, setApiKey, setProvider, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
+  }), [state, dispatch, setApiKey, setProvider, setModel, setCustomBaseURL, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }

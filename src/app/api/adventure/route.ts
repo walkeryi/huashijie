@@ -5,7 +5,7 @@ import { WorldCard, PlayerState, DialogueEntry, AIResponse } from '@/lib/types'
 
 const API_TIMEOUT_MS = 30000
 
-type Provider = 'anthropic' | 'openai' | 'deepseek'
+type Provider = 'anthropic' | 'openai' | 'deepseek' | 'custom'
 
 function detectProvider(apiKey: string): Provider {
   if (apiKey.startsWith('sk-ant-')) return 'anthropic'
@@ -122,10 +122,10 @@ function buildAnthropicMessages(dialogueHistory: DialogueEntry[], worldCard: Wor
   return messages
 }
 
-async function callAnthropic(apiKey: string, systemPrompt: string, messages: Anthropic.MessageParam[]): Promise<string> {
+async function callAnthropic(apiKey: string, systemPrompt: string, messages: Anthropic.MessageParam[], model?: string): Promise<string> {
   const client = new Anthropic({ apiKey })
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: model || 'claude-sonnet-4-6',
     max_tokens: 1024,
     system: systemPrompt,
     messages,
@@ -184,12 +184,14 @@ async function callOpenAI(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { worldCard, playerState, dialogueHistory, apiKey: requestApiKey, provider: requestProvider } = body as {
+    const { worldCard, playerState, dialogueHistory, apiKey: requestApiKey, provider: requestProvider, model: requestModel, customBaseURL } = body as {
       worldCard: WorldCard
       playerState: PlayerState
       dialogueHistory: DialogueEntry[]
       apiKey?: string
       provider?: Provider
+      model?: string
+      customBaseURL?: string
     }
 
     if (!worldCard || !playerState || !dialogueHistory) {
@@ -206,15 +208,17 @@ export async function POST(request: NextRequest) {
 
     let text: string
     try {
+      const model = requestModel || (provider === 'anthropic' ? 'claude-sonnet-4-6' : provider === 'deepseek' ? 'deepseek-chat' : 'gpt-4o')
+
       if (provider === 'anthropic') {
         const messages = buildAnthropicMessages(dialogueHistory, worldCard)
-        text = await callAnthropic(apiKey, systemPrompt, messages)
-      } else if (provider === 'deepseek') {
-        const messages = buildOpenAIMessages(dialogueHistory, worldCard, systemPrompt)
-        text = await callOpenAI(apiKey, messages, 'https://api.deepseek.com', 'deepseek-chat')
+        text = await callAnthropic(apiKey, systemPrompt, messages, model)
       } else {
+        const baseURL = provider === 'deepseek' ? 'https://api.deepseek.com'
+          : provider === 'custom' ? customBaseURL
+          : undefined
         const messages = buildOpenAIMessages(dialogueHistory, worldCard, systemPrompt)
-        text = await callOpenAI(apiKey, messages)
+        text = await callOpenAI(apiKey, messages, baseURL || undefined, model)
       }
     } finally {
       clearTimeout(timeoutId)
