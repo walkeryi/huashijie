@@ -275,3 +275,97 @@ describe('PRESET_NPC_FIELDS', () => {
     expect(keys).not.toContain('currentState')
   })
 })
+
+// ========== 高级 API 设置 ==========
+
+describe('高级 API 设置', () => {
+  const base = createInitialState()
+
+  test('SET_PROTOCOL 切换协议', () => {
+    const s = gameReducer(base, { type: 'SET_PROTOCOL', protocol: 'anthropic' })
+    expect(s.protocol).toBe('anthropic')
+  })
+
+  test('SET_PROVIDER_NAME 设置供应商名称', () => {
+    const s = gameReducer(base, { type: 'SET_PROVIDER_NAME', name: 'MyProvider' })
+    expect(s.providerName).toBe('MyProvider')
+  })
+
+  test('SET_API_BASE_URL 设置请求地址', () => {
+    const s = gameReducer(base, { type: 'SET_API_BASE_URL', url: 'https://example.com' })
+    expect(s.apiBaseURL).toBe('https://example.com')
+  })
+
+  test('SET_ADVANCED_PARAMS 合并高级参数', () => {
+    let s = gameReducer(base, { type: 'SET_ADVANCED_PARAMS', params: { temperature: 0.5 } })
+    expect(s.advancedParams?.temperature).toBe(0.5)
+    s = gameReducer(s, { type: 'SET_ADVANCED_PARAMS', params: { max_tokens: 2048 } })
+    expect(s.advancedParams?.temperature).toBe(0.5) // 保留之前的
+    expect(s.advancedParams?.max_tokens).toBe(2048)
+  })
+
+  test('APPLY_PRESET OpenAI 预设自动填充所有字段', () => {
+    const preset = {
+      id: 'openai', name: 'OpenAI', provider: 'openai' as const,
+      apiBaseURL: 'https://api.openai.com/v1', defaultModel: 'gpt-4o',
+      protocol: 'openai' as const, icon: 'gpt-4o',
+    }
+    const s = gameReducer(base, { type: 'APPLY_PRESET', preset })
+    expect(s.provider).toBe('openai')
+    expect(s.providerName).toBe('OpenAI')
+    expect(s.apiBaseURL).toBe('https://api.openai.com/v1')
+    expect(s.model).toBe('gpt-4o')
+    expect(s.protocol).toBe('openai')
+    expect(s.advancedParams?.thinking).toBe('enabled')
+    expect(s.advancedParams?.reasoning_effort).toBe('high')
+    expect(s.advancedParams?.stream).toBe(false)
+    expect(s.advancedParams?.temperature).toBe(0.7)
+    expect(s.advancedParams?.max_tokens).toBe(4096)
+    expect(s.advancedParams?.top_p).toBe(1)
+  })
+
+  test('APPLY_PRESET Anthropic 预设', () => {
+    const preset = {
+      id: 'anthropic', name: 'Anthropic', provider: 'anthropic' as const,
+      apiBaseURL: 'https://api.anthropic.com', defaultModel: 'claude-sonnet-4-6',
+      protocol: 'anthropic' as const, icon: 'claude-sonnet-4-6',
+    }
+    const s = gameReducer(base, { type: 'APPLY_PRESET', preset })
+    expect(s.provider).toBe('anthropic')
+    expect(s.providerName).toBe('Anthropic')
+    expect(s.apiBaseURL).toBe('https://api.anthropic.com')
+    expect(s.model).toBe('claude-sonnet-4-6')
+    expect(s.protocol).toBe('anthropic')
+    expect(s.advancedParams?.max_tokens).toBe(4096)
+    expect(s.advancedParams?.temperature).toBe(0.7)
+    expect(s.advancedParams?.top_k).toBe(40)
+    expect(s.advancedParams?.thinking).toBeUndefined()
+  })
+
+  test('APPLY_PRESET DeepSeek 预设', () => {
+    const preset = {
+      id: 'deepseek', name: 'DeepSeek', provider: 'deepseek' as const,
+      apiBaseURL: 'https://api.deepseek.com', defaultModel: 'deepseek-chat',
+      protocol: 'openai' as const, icon: 'deepseek-chat',
+    }
+    const s = gameReducer(base, { type: 'APPLY_PRESET', preset })
+    expect(s.provider).toBe('deepseek')
+    expect(s.providerName).toBe('DeepSeek')
+    expect(s.apiBaseURL).toBe('https://api.deepseek.com')
+    expect(s.model).toBe('deepseek-chat')
+    expect(s.protocol).toBe('openai')
+    expect(s.advancedParams?.thinking).toBe('enabled')
+  })
+
+  test('APPLY_PRESET 自定义供应商清空字段', () => {
+    const preset = {
+      id: 'custom', name: '自定义', provider: 'custom' as const,
+      apiBaseURL: '', defaultModel: '', protocol: 'openai' as const, icon: '',
+    }
+    const s = gameReducer(base, { type: 'APPLY_PRESET', preset })
+    expect(s.provider).toBe('custom')
+    expect(s.providerName).toBe('自定义')
+    expect(s.apiBaseURL).toBe('')
+    expect(s.model).toBe('')
+  })
+})
