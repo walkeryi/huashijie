@@ -301,7 +301,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
 
     return (
       <div key={fieldKey} className="flex items-center gap-1.5 text-sm">
-        <span className={`shrink-0 text-xs w-5 text-center ${catClass}`} title={cat === 'core' ? '核心' : cat === 'fixed' ? '固定' : '自定义'}>{catBadge}</span>
+        <span className={`shrink-0 text-xs w-5 text-center ${catClass}`} title={core ? '核心' : '自定义'}>{catBadge}</span>
         <span className="shrink-0 w-16 text-xs text-[var(--text-secondary)] truncate" title={nameLabel}>{nameLabel}</span>
         <div className="flex-1 flex items-center">{valueInput}</div>
         {showDelete && (
