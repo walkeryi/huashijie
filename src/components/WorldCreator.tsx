@@ -2,17 +2,17 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { WorldCard, AttributeDef, NPCDef, StoryBeat } from '@/lib/types'
+import { WorldCard, AttributeDef, NPCDef, StoryBeat, PRESET_NPC_FIELDS } from '@/lib/types'
 import { createEmptyCard, saveCustomCard } from '@/lib/custom-cards'
 import AccountButton from './AccountButton'
 import SystemSettings from './SystemSettings'
 
-type Tab = 'world' | 'attrs' | 'npcs' | 'items' | 'beats' | 'preview'
+type Tab = 'world' | 'attrs' | 'characters' | 'items' | 'beats' | 'preview'
 
 const TABS: { key: Tab; label: string }[] = [
   { key: 'world', label: '世界观' },
   { key: 'attrs', label: '属性' },
-  { key: 'npcs', label: 'NPC' },
+  { key: 'characters', label: '👤角色' },
   { key: 'items', label: '物品&旗标' },
   { key: 'beats', label: '节拍链' },
   { key: 'preview', label: '预览' },
@@ -87,7 +87,7 @@ export default function WorldCreator() {
         <div className="bg-[var(--bg-secondary)] border border-[var(--border)] rounded-2xl p-6">
           {tab === 'world' && <WorldTab card={card} update={update} />}
           {tab === 'attrs' && <AttrsTab card={card} update={update} />}
-          {tab === 'npcs' && <NPCsTab card={card} update={update} />}
+          {tab === 'characters' && <CharacterTab card={card} update={update} />}
           {tab === 'items' && <ItemsTab card={card} update={update} />}
           {tab === 'beats' && <BeatsTab card={card} update={update} />}
           {tab === 'preview' && <PreviewTab card={card} />}
@@ -162,38 +162,239 @@ function AttrsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
   )
 }
 
-// ====== NPC ======
+// ====== 角色 ======
 
-function NPCsTab({ card, update }: { card: WorldCard; update: (p: Partial<WorldCard>) => void }) {
-  const add = () => {
-    const id = 'npc_' + Date.now()
-    update({ npcs: [...card.npcs, { id, name: '', description: '', initialAffinity: 0 }] })
+function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<WorldCard>) => void }) {
+  const [subTab, setSubTab] = useState<'main' | 'side'>('main')
+  const [newCustomKey, setNewCustomKey] = useState('')
+
+  const mainChar = card.npcs.find(n => n.isMainCharacter)
+  const sideChars = card.npcs.filter(n => !n.isMainCharacter)
+
+  const ensureMainExists = () => {
+    if (mainChar) return
+    const id = 'npc_main_' + Date.now()
+    const fields: Record<string, any> = { id }
+    PRESET_NPC_FIELDS.forEach(f => {
+      if (f.key === 'id' || f.key === 'isMainCharacter') return
+      if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
+      else if (f.type === 'boolean') fields[f.key] = false
+      else if (f.type === 'string[]') fields[f.key] = []
+      else fields[f.key] = ''
+    })
+    fields.name = '未命名'
+    const newNpc: NPCDef = { id, isMainCharacter: true, fields }
+    update({ npcs: [...card.npcs, newNpc] })
   }
-  const remove = (idx: number) => update({ npcs: card.npcs.filter((_, i) => i !== idx) })
-  const edit = (idx: number, npc: Partial<NPCDef>) => {
-    const list = [...card.npcs]
-    list[idx] = { ...list[idx], ...npc }
-    update({ npcs: list })
+
+  const updateField = (npcId: string, fieldKey: string, value: any) => {
+    update({
+      npcs: card.npcs.map(n =>
+        n.id === npcId ? { ...n, fields: { ...n.fields, [fieldKey]: value } } : n
+      )
+    })
+  }
+
+  const addSideCharacter = () => {
+    const id = 'npc_side_' + Date.now()
+    const fields: Record<string, any> = { id }
+    PRESET_NPC_FIELDS.forEach(f => {
+      if (f.key === 'id' || f.key === 'isMainCharacter') return
+      if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
+      else if (f.type === 'boolean') fields[f.key] = false
+      else if (f.type === 'string[]') fields[f.key] = []
+      else fields[f.key] = ''
+    })
+    fields.name = '新角色'
+    const newNpc: NPCDef = { id, isMainCharacter: false, fields }
+    update({ npcs: [...card.npcs, newNpc] })
+  }
+
+  const removeCharacter = (npcId: string) => {
+    update({ npcs: card.npcs.filter(n => n.id !== npcId) })
+  }
+
+  const addCustomField = (npcId: string) => {
+    if (!newCustomKey.trim()) return
+    updateField(npcId, newCustomKey.trim(), '')
+    setNewCustomKey('')
+  }
+
+  const renderField = (npc: NPCDef, field: (typeof PRESET_NPC_FIELDS)[number]) => {
+    const value = npc.fields[field.key]
+
+    switch (field.type) {
+      case 'number':
+        return (
+          <div key={field.key} className="flex items-center gap-2">
+            <label className="text-sm text-[var(--text-secondary)] w-24 shrink-0">{field.label}</label>
+            <input
+              type="number"
+              value={value ?? 0}
+              onChange={e => updateField(npc.id, field.key, Number(e.target.value))}
+              className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm"
+              {...(field.key === 'initialAffinity' ? { min: -100, max: 100 } : {})}
+            />
+          </div>
+        )
+      case 'boolean':
+        return (
+          <div key={field.key} className="flex items-center gap-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="checkbox"
+                checked={!!value}
+                onChange={e => updateField(npc.id, field.key, e.target.checked)}
+                className="rounded"
+              />
+              {field.label}
+            </label>
+          </div>
+        )
+      case 'string[]':
+        return (
+          <div key={field.key}>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-[var(--text-secondary)] w-24 shrink-0">{field.label}</label>
+              <input
+                value={Array.isArray(value) ? value.join(', ') : ''}
+                onChange={e => updateField(npc.id, field.key, e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
+                placeholder="逗号分隔多个标签"
+                className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm"
+              />
+            </div>
+          </div>
+        )
+      default: // string
+        return (
+          <div key={field.key}>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-[var(--text-secondary)] w-24 shrink-0">{field.label}</label>
+              {field.key === 'dialogueExamples' ? (
+                <textarea
+                  value={value ?? ''}
+                  onChange={e => updateField(npc.id, field.key, e.target.value)}
+                  placeholder={field.desc}
+                  rows={2}
+                  className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs resize-y"
+                />
+              ) : (
+                <input
+                  value={value ?? ''}
+                  onChange={e => updateField(npc.id, field.key, e.target.value)}
+                  placeholder={field.desc}
+                  className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm"
+                />
+              )}
+            </div>
+          </div>
+        )
+    }
+  }
+
+  const renderCharacterCard = (npc: NPCDef, showDelete: boolean) => {
+    const customKeys = Object.keys(npc.fields).filter(k => !PRESET_NPC_FIELDS.find(f => f.key === k))
+
+    return (
+      <div key={npc.id} className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-bold">{npc.fields.name || '未命名'}</span>
+          {showDelete && (
+            <button onClick={() => removeCharacter(npc.id)} className="text-red-400 hover:text-red-300 text-sm">✕ 删除</button>
+          )}
+        </div>
+
+        {/* 预设字段 */}
+        <div className="space-y-2">
+          {PRESET_NPC_FIELDS.filter(f => f.key !== 'isMainCharacter').map(f => renderField(npc, f))}
+        </div>
+
+        {/* 自定义字段 */}
+        {customKeys.length > 0 && (
+          <div className="border-t border-[var(--border)] pt-2 space-y-1">
+            <span className="text-xs text-[var(--text-secondary)]">自定义字段</span>
+            {customKeys.map(k => (
+              <div key={k} className="flex items-center gap-2">
+                <label className="text-xs text-[var(--text-secondary)] w-24 shrink-0">{k}</label>
+                <input
+                  value={npc.fields[k] ?? ''}
+                  onChange={e => updateField(npc.id, k, e.target.value)}
+                  className="flex-1 px-2 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 添加自定义字段 */}
+        <div className="flex gap-2 items-center pt-1">
+          <input
+            value={newCustomKey}
+            onChange={e => setNewCustomKey(e.target.value)}
+            placeholder="新字段名"
+            className="flex-1 px-2 py-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs"
+          />
+          <button
+            onClick={() => addCustomField(npc.id)}
+            disabled={!newCustomKey.trim()}
+            className="px-3 py-1 rounded-lg bg-[var(--accent)] text-black text-xs font-medium disabled:opacity-50"
+          >
+            + 添加
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--text-secondary)]">添加世界里的关键角色。给每个人一段背景描述，AI 会据此生成对话。</p>
-      {card.npcs.length === 0 && <p className="text-sm text-[var(--text-secondary)]">暂无 NPC。</p>}
-      {card.npcs.map((npc, i) => (
-        <div key={i} className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] space-y-2">
-          <div className="flex gap-2">
-            <input value={npc.name} onChange={e => edit(i, { name: e.target.value })} placeholder="NPC 名称" className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm" />
-            <div className="flex items-center gap-1 text-sm text-[var(--text-secondary)]">
-              好感
-              <input type="number" value={npc.initialAffinity} onChange={e => edit(i, { initialAffinity: Number(e.target.value) })} min={-100} max={100} className="w-16 px-2 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-center text-sm" />
+      {/* 主角/配角 子标签 */}
+      <div className="flex gap-4 border-b border-[var(--border)] pb-2">
+        <button
+          onClick={() => setSubTab('main')}
+          className={`text-sm pb-1 border-b-2 transition-colors ${
+            subTab === 'main'
+              ? 'border-[var(--accent)] text-[var(--accent)]'
+              : 'border-transparent text-[var(--text-secondary)]'
+          }`}
+        >
+          ⭐ 主角
+        </button>
+        <button
+          onClick={() => setSubTab('side')}
+          className={`text-sm pb-1 border-b-2 transition-colors ${
+            subTab === 'side'
+              ? 'border-[var(--accent)] text-[var(--accent)]'
+              : 'border-transparent text-[var(--text-secondary)]'
+          }`}
+        >
+          👥 配角
+        </button>
+      </div>
+
+      {subTab === 'main' && (
+        <>
+          {mainChar ? (
+            renderCharacterCard(mainChar, false)
+          ) : (
+            <div className="text-center py-8 space-y-3">
+              <p className="text-sm text-[var(--text-secondary)]">还没有主角。主角是玩家在游戏中扮演的角色。</p>
+              <button onClick={ensureMainExists} className="px-4 py-2 rounded-xl bg-[var(--accent)] text-black text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">
+                + 创建主角
+              </button>
             </div>
-            <button onClick={() => remove(i)} className="text-red-400 hover:text-red-300 px-2">✕</button>
-          </div>
-          <input value={npc.description} onChange={e => edit(i, { description: e.target.value })} placeholder="背景描述：他/她是谁？想要什么？怕什么？" className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs" />
-        </div>
-      ))}
-      <button onClick={add} className="text-sm text-[var(--accent)] hover:underline">+ 添加 NPC</button>
+          )}
+        </>
+      )}
+
+      {subTab === 'side' && (
+        <>
+          <p className="text-sm text-[var(--text-secondary)]">配角是世界中与玩家互动的其他角色。</p>
+          {sideChars.length === 0 && <p className="text-sm text-[var(--text-secondary)]">暂无配角。</p>}
+          {sideChars.map(npc => renderCharacterCard(npc, true))}
+          <button onClick={addSideCharacter} className="text-sm text-[var(--accent)] hover:underline">+ 添加配角</button>
+        </>
+      )}
     </div>
   )
 }
@@ -306,7 +507,7 @@ function BeatsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
               const val = beat.preconditions?.npcAffinityChecks?.[key] || ''
               return (
                 <span key={key} className="inline-flex items-center gap-1 mr-2">
-                  👤{npc.name} ≥
+                  👤{npc.fields?.name || npc.id} ≥
                   <input
                     type="number"
                     value={val.replace('>= ', '')}
@@ -395,7 +596,7 @@ function PreviewTab({ card }: { card: WorldCard }) {
         </div>
         <div className="p-3 rounded-xl bg-[var(--bg-card)]">
           <div className="text-[var(--text-secondary)] mb-1">NPC ({card.npcs.length})</div>
-          {card.npcs.map(n => <div key={n.id}>👤 {n.name} (好感 {n.initialAffinity})</div>)}
+          {card.npcs.map(n => <div key={n.id}>👤 {n.fields?.name || n.id} (好感 {n.fields?.initialAffinity ?? 0})</div>)}
           {card.npcs.length === 0 && <span className="text-[var(--text-secondary)]">无</span>}
         </div>
         <div className="p-3 rounded-xl bg-[var(--bg-card)]">
