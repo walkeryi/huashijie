@@ -41,6 +41,20 @@ describe('gameReducer', () => {
     expect(next.npcAffinities).toEqual({})
   })
 
+  it('START_GAME 从新 NPCDef.fields 初始化 npcAffinities', () => {
+    const card = makeWorldCard({
+      npcs: [
+        { id: 'ally', isMainCharacter: false, fields: { initialAffinity: 20, name: 'Ally', dialogueTone: '友善', id: 'ally', isMainCharacter: false, gender: '男', origin: '未知', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
+        { id: 'rival', isMainCharacter: false, fields: { initialAffinity: -10, name: 'Rival', dialogueTone: '冷淡', id: 'rival', isMainCharacter: false, gender: '女', origin: '未知', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
+      ],
+    })
+    const state = createInitialState()
+    const action: GameAction = { type: 'START_GAME', worldCard: card, playerName: 'test' }
+    const next = gameReducer(state, action)
+    expect(next.npcAffinities).toEqual({ ally: 20, rival: -10 })
+    expect(next.npcRuntime).toEqual({ ally: { currentSelfPerception: '', currentState: '' }, rival: { currentSelfPerception: '', currentState: '' } })
+  })
+
   it('resets dialogue and options on new game', () => {
     const state: GameState = {
       ...createInitialState(),
