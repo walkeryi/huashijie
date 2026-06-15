@@ -153,9 +153,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case 'SET_API_KEY':
+      console.log('[Reducer] SET_API_KEY:', action.apiKey.slice(0,20)+'...')
+      console.trace('[Reducer] SET_API_KEY 来源')
       return { ...state, apiKey: action.apiKey }
 
     case 'SET_PROVIDER':
+      console.log('[Reducer] SET_PROVIDER:', action.provider, 'apiKey:', (action.apiKey||'').slice(0,20)+'...')
+      console.trace('[Reducer] SET_PROVIDER 来源')
       return {
         ...state,
         provider: action.provider,
