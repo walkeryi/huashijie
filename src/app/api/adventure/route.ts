@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { WorldCard, PlayerState, DialogueEntry, AIResponse } from '@/lib/types'
 
 const API_TIMEOUT_MS = 30000
 
-function getAnthropicClient(apiKeyOverride?: string): Anthropic {
-  const apiKey = apiKeyOverride || process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    throw new Error('缺少 API Key：请在页面输入或设置 ANTHROPIC_API_KEY 环境变量')
+type Provider = 'anthropic' | 'openai'
+
+function detectProvider(apiKey: string): Provider {
+  if (apiKey.startsWith('sk-ant-')) return 'anthropic'
+  return 'openai'
+}
+
+function getApiKey(apiKeyOverride?: string): string {
+  const key = apiKeyOverride || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY
+  if (!key) {
+    throw new Error('缺少 API Key：请在页面输入或设置环境变量')
   }
-  return new Anthropic({ apiKey })
+  return key
 }
 
 function sanitizePlayerName(name: string): string {
-  // 防止提示注入：限制长度，过滤换行和特殊标记
   return name.replace(/[\n\r\\]/g, '').slice(0, 50)
 }
 
@@ -64,27 +71,16 @@ ${attrText}
 - 不要输出"未完待续"这类元叙述`
 }
 
-function extractTextFromResponse(response: Anthropic.Message): string {
-  const firstBlock = response.content[0]
-  if (!firstBlock || firstBlock.type !== 'text') {
-    throw new Error('AI 返回了非预期的响应格式')
-  }
-  return firstBlock.text
-}
-
 function parseAIResponse(text: string): AIResponse {
-  // 尝试直接解析 JSON
   try {
     return JSON.parse(text.trim()) as AIResponse
   } catch {
-    // 尝试从 markdown 代码块中提取
     const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
     if (jsonMatch) {
       return JSON.parse(jsonMatch[1].trim()) as AIResponse
     }
   }
 
-  // 降级：当作纯文本，生成默认选项
   return {
     narration: text.trim(),
     options: [
@@ -97,17 +93,88 @@ function parseAIResponse(text: string): AIResponse {
 }
 
 function validateAIResponse(response: AIResponse, fallbackText: string): AIResponse {
-  if (!response.narration) {
-    response.narration = fallbackText.trim()
-  }
-  if (!response.options || response.options.length === 0) {
-    response.options = [{ text: '继续...' }]
-  }
-  if (!response.attributeChanges) {
-    response.attributeChanges = {}
-  }
+  if (!response.narration) response.narration = fallbackText.trim()
+  if (!response.options || response.options.length === 0) response.options = [{ text: '继续...' }]
+  if (!response.attributeChanges) response.attributeChanges = {}
   return response
 }
+
+// ====== Anthropic ======
+
+function buildAnthropicMessages(dialogueHistory: DialogueEntry[], worldCard: WorldCard): Anthropic.MessageParam[] {
+  const messages: Anthropic.MessageParam[] = []
+
+  for (const entry of dialogueHistory.slice(-12)) {
+    if (entry.role === 'narrator') {
+      messages.push({ role: 'assistant', content: entry.content })
+    } else if (entry.role === 'player') {
+      messages.push({ role: 'user', content: `[玩家选择]: ${entry.content}` })
+    }
+  }
+
+  if (messages.length === 0) {
+    messages.push({
+      role: 'user',
+      content: `[游戏开始]\n初始场景：${worldCard.initialScene}\n\n请根据以上场景开始叙述，并给出玩家的选项。`,
+    })
+  }
+
+  return messages
+}
+
+async function callAnthropic(apiKey: string, systemPrompt: string, messages: Anthropic.MessageParam[]): Promise<string> {
+  const client = new Anthropic({ apiKey })
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages,
+  })
+
+  const firstBlock = response.content[0]
+  if (!firstBlock || firstBlock.type !== 'text') {
+    throw new Error('AI 返回了非预期的响应格式')
+  }
+  return firstBlock.text
+}
+
+// ====== OpenAI ======
+
+function buildOpenAIMessages(dialogueHistory: DialogueEntry[], worldCard: WorldCard, systemPrompt: string): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+  const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+  ]
+
+  for (const entry of dialogueHistory.slice(-12)) {
+    if (entry.role === 'narrator') {
+      messages.push({ role: 'assistant', content: entry.content })
+    } else if (entry.role === 'player') {
+      messages.push({ role: 'user', content: `[玩家选择]: ${entry.content}` })
+    }
+  }
+
+  if (messages.length === 1) {
+    messages.push({
+      role: 'user',
+      content: `[游戏开始]\n初始场景：${worldCard.initialScene}\n\n请根据以上场景开始叙述，并给出玩家的选项。`,
+    })
+  }
+
+  return messages
+}
+
+async function callOpenAI(apiKey: string, messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[]): Promise<string> {
+  const client = new OpenAI({ apiKey })
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    max_tokens: 1024,
+    messages,
+  })
+
+  return response.choices[0]?.message?.content ?? ''
+}
+
+// ====== Route Handler ======
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,61 +186,39 @@ export async function POST(request: NextRequest) {
       apiKey?: string
     }
 
-    // 输入验证
     if (!worldCard || !playerState || !dialogueHistory) {
       return NextResponse.json({ error: '请求体不完整' }, { status: 400 })
     }
 
-    // 构建消息历史
-    const messages: Anthropic.MessageParam[] = []
-
-    for (const entry of dialogueHistory.slice(-12)) {
-      if (entry.role === 'narrator') {
-        messages.push({ role: 'assistant', content: entry.content })
-      } else if (entry.role === 'player') {
-        messages.push({ role: 'user', content: `[玩家选择]: ${entry.content}` })
-      }
-    }
-
-    // 如果是新游戏（无历史），发送一个初始消息
-    if (messages.length === 0) {
-      messages.push({
-        role: 'user',
-        content: `[游戏开始]\n初始场景：${worldCard.initialScene}\n\n请根据以上场景开始叙述，并给出玩家的选项。`,
-      })
-    }
-
+    const apiKey = getApiKey(requestApiKey)
+    const provider = detectProvider(apiKey)
     const systemPrompt = buildSystemPrompt(worldCard, playerState)
-    const anthropic = getAnthropicClient(requestApiKey)
 
     // 带超时的 API 调用
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
 
-    let response: Anthropic.Message
+    let text: string
     try {
-      response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages,
-      })
+      if (provider === 'anthropic') {
+        const messages = buildAnthropicMessages(dialogueHistory, worldCard)
+        text = await callAnthropic(apiKey, systemPrompt, messages)
+      } else {
+        const messages = buildOpenAIMessages(dialogueHistory, worldCard, systemPrompt)
+        text = await callOpenAI(apiKey, messages)
+      }
     } finally {
       clearTimeout(timeoutId)
     }
 
-    // 解析并验证 AI 响应
-    const text = extractTextFromResponse(response)
     const aiResponse = parseAIResponse(text)
     validateAIResponse(aiResponse, text)
 
     return NextResponse.json(aiResponse)
   } catch (error: unknown) {
-    // 只记录日志，不向客户端泄漏内部错误详情
     const message = error instanceof Error ? error.message : String(error)
     console.error('API Error:', message)
 
-    // 区分超时错误
     if (error instanceof Error && error.name === 'AbortError') {
       return NextResponse.json({ error: 'AI 响应超时，请重试' }, { status: 504 })
     }
