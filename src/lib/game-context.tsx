@@ -62,7 +62,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         dialogueHistory: [],
         currentOptions: [],
         currentNarration: '',
-        isLoading: true,
+        isLoading: false,
         error: null,
       }
     }
