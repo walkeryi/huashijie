@@ -139,7 +139,7 @@ export default function WorldCardSelector() {
       <div className="w-full max-w-4xl">
         {/* Title */}
         <div className="text-center mb-6">
-          <h1 className="text-4xl font-bold mb-2">🌍 陪你一起冒险</h1>
+          <h1 className="text-4xl font-bold mb-2">🗣️ 话世界</h1>
           <p className="text-lg text-[var(--text-secondary)]">
             选择你的世界，开始一段全新的旅程
           </p>

@@ -4,8 +4,8 @@ import { GameProvider } from '@/lib/game-context'
 import SystemSettings from '@/components/SystemSettings'
 
 export const metadata: Metadata = {
-  title: '陪你一起冒险',
-  description: 'AI 驱动的文字冒险世界引擎',
+  title: '话世界',
+  description: '用对话创造世界 — AI 驱动的文字冒险引擎',
 }
 
 export default function RootLayout({
