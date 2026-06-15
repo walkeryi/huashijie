@@ -212,7 +212,7 @@ export interface SaveMeta {
 export type GameAction =
   | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
   | { type: 'SET_API_KEY'; apiKey: string }
-  | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'; apiKey?: string; model?: string; customBaseURL?: string }
+  | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'; apiKey?: string; model?: string; customBaseURL?: string; protocol?: Protocol; providerName?: string; apiBaseURL?: string; advancedParams?: AdvancedParams }
   | { type: 'SET_MODEL'; model: string }
   | { type: 'SET_CUSTOM_BASE_URL'; baseURL: string }
   | { type: 'SET_PROTOCOL'; protocol: Protocol }

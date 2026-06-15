@@ -181,6 +181,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...(action.apiKey !== undefined ? { apiKey: action.apiKey } : {}),
         ...(action.model !== undefined ? { model: action.model } : {}),
         ...(action.customBaseURL !== undefined ? { customBaseURL: action.customBaseURL } : {}),
+        ...(action.protocol !== undefined ? { protocol: action.protocol } : {}),
+        ...(action.providerName !== undefined ? { providerName: action.providerName } : {}),
+        ...(action.apiBaseURL !== undefined ? { apiBaseURL: action.apiBaseURL } : {}),
+        ...(action.advancedParams !== undefined ? { advancedParams: action.advancedParams } : {}),
       }
 
     case 'SET_MODEL':
@@ -188,6 +192,33 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SET_CUSTOM_BASE_URL':
       return { ...state, customBaseURL: action.baseURL }
+
+    case 'SET_PROTOCOL':
+      return { ...state, protocol: action.protocol }
+
+    case 'SET_PROVIDER_NAME':
+      return { ...state, providerName: action.name }
+
+    case 'SET_API_BASE_URL':
+      return { ...state, apiBaseURL: action.url }
+
+    case 'SET_ADVANCED_PARAMS':
+      return { ...state, advancedParams: { ...state.advancedParams, ...action.params } }
+
+    case 'APPLY_PRESET': {
+      const defaultAdv: AdvancedParams = action.preset.protocol === 'anthropic'
+        ? { max_tokens: 4096, temperature: 0.7, top_p: 1, top_k: 40 }
+        : { thinking: 'enabled', reasoning_effort: 'high', stream: false, temperature: 0.7, max_tokens: 4096, top_p: 1 }
+      return {
+        ...state,
+        provider: action.preset.provider,
+        providerName: action.preset.name,
+        model: action.preset.defaultModel,
+        apiBaseURL: action.preset.apiBaseURL,
+        protocol: action.preset.protocol,
+        advancedParams: defaultAdv,
+      }
+    }
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading, error: null }
@@ -349,7 +380,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek' | 'custom') => {
     const saved = loadApiConfigForProvider(provider)
-    dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
+    dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL, protocol: saved.protocol, providerName: saved.providerName, apiBaseURL: saved.apiBaseURL, advancedParams: saved.advancedParams })
   }, [])
 
   const setModel = useCallback((model: string) => {
@@ -499,7 +530,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const saved = loadApiConfigForProvider(provider)
     console.log('[API] 启动加载:', provider, saved.apiKey ? 'key='+saved.apiKey.slice(0,12)+'...' : '无key')
     if (saved.apiKey) {
-      dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
+      dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL, protocol: saved.protocol, providerName: saved.providerName, apiBaseURL: saved.apiBaseURL, advancedParams: saved.advancedParams })
     }
   }, [])
 
@@ -515,7 +546,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     configs[state.provider] = { apiKey: state.apiKey, model: state.model, customBaseURL: state.customBaseURL, protocol: state.protocol, providerName: state.providerName, apiBaseURL: state.apiBaseURL, advancedParams: state.advancedParams }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
-  }, [state.apiKey, state.provider, state.model, state.customBaseURL])
+  }, [state.apiKey, state.provider, state.model, state.customBaseURL, state.protocol, state.providerName, state.apiBaseURL, state.advancedParams])
 
   const value: GameContextValue = useMemo(() => ({
     state,
