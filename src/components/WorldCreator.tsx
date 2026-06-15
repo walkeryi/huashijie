@@ -164,12 +164,13 @@ function AttrsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
 
 // ====== 角色 ======
 
-// 核心字段：不可删除、不可编辑名称和说明
+// 核心字段：不可删除
 const CORE_FIELD_KEYS = ['id', 'name', 'gender', 'origin', 'dialogueTone', 'initialAffinity']
-// 其余 former 固定字段（birthday/personalityTags/appearance）→ 降为自定义，玩家自行添加
 
-function fieldCategory(key: string): 'core' | 'custom' {
-  return CORE_FIELD_KEYS.includes(key) ? 'core' : 'custom'
+function fieldCategory(key: string): 'core' | 'preset' | 'custom' {
+  if (CORE_FIELD_KEYS.includes(key)) return 'core'
+  if (PRESET_NPC_FIELDS.some(f => f.key === key)) return 'preset'
+  return 'custom'
 }
 
 function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<WorldCard>) => void }) {
@@ -225,10 +226,13 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
 
   const deleteField = (npcId: string, fieldKey: string) => {
     const cat = fieldCategory(fieldKey)
-    if (cat === 'core') return // 核心字段不可删除
+    if (cat === 'core') return
     update({
       npcs: card.npcs.map(n => {
         if (n.id !== npcId) return n
+        if (cat === 'preset') {
+          return { ...n, fields: { ...n.fields, ['_rm_' + fieldKey]: true } }
+        }
         const fields = { ...n.fields }
         delete fields[fieldKey]
         const meta = fields._customMeta ? { ...fields._customMeta } : {}
@@ -253,12 +257,15 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   }
 
   const getVisibleKeys = (npc: NPCDef): string[] => {
-    const core = CORE_FIELD_KEYS.filter(k => k !== 'isMainCharacter')
-    const presetKeys = PRESET_NPC_FIELDS.map(f => f.key)
+    // 预设字段：排除 isMainCharacter 和被标记删除的
+    const preset = PRESET_NPC_FIELDS
+      .map(f => f.key)
+      .filter(k => k !== 'isMainCharacter' && !npc.fields['_rm_' + k])
+    // 自定义字段
     const custom = Object.keys(npc.fields).filter(k =>
-      k !== '_customMeta' && !k.startsWith('_rm_') && !presetKeys.includes(k)
+      k !== '_customMeta' && !k.startsWith('_rm_') && !PRESET_NPC_FIELDS.some(f => f.key === k)
     )
-    return [...core, ...custom]
+    return [...preset, ...custom]
   }
 
   const renderFieldRow = (npc: NPCDef, fieldKey: string) => {
@@ -269,12 +276,10 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     const showDelete = cat !== 'core'
 
     const nameLabel = preset?.label ?? fieldKey
-    const descHint = cat === 'custom'
-      ? (npc.fields._customMeta?.[fieldKey]?.desc ?? '')
-      : (preset?.desc ?? '')
+    const descHint = preset?.desc ?? (npc.fields._customMeta?.[fieldKey]?.desc ?? '')
 
-    const catBadge = cat === 'core' ? '🔒' : '✨'
-    const catClass = cat === 'core' ? 'text-[var(--text-secondary)]' : 'text-green-400'
+    const catBadge = cat === 'core' ? '🔒' : cat === 'preset' ? '📌' : '✨'
+    const catClass = cat === 'core' ? 'text-[var(--text-secondary)]' : cat === 'preset' ? 'text-[var(--accent)]' : 'text-green-400'
 
     const sharedInputClass = 'px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm'
 
