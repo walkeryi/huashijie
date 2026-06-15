@@ -24,19 +24,19 @@ export default function NPCPanel({ open, onClose, npcs, affinities }: NPCPanelPr
         ) : (
           <div className="space-y-3">
             {npcs.map(npc => {
-              const val = affinities[npc.id] ?? npc.initialAffinity
+              const val = affinities[npc.id] ?? npc.fields.initialAffinity ?? 0
               const pct = Math.max(0, Math.min(100, val))
               const barColor = val >= 0 ? 'var(--accent)' : 'var(--danger)'
               return (
                 <div key={npc.id}>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="font-medium">{npc.name}</span>
+                    <span className="font-medium">{npc.fields.name || npc.id}</span>
                     <span className={val < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'}>{val}/100</span>
                   </div>
                   <div className="h-2 bg-[var(--bg-primary)] rounded-full overflow-hidden">
                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: barColor }} />
                   </div>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">{npc.description}</p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">{npc.fields.origin || npc.fields.dialogueTone || ''}</p>
                 </div>
               )
             })}
