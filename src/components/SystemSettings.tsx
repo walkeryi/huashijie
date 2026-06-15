@@ -18,6 +18,7 @@ export default function SystemSettings() {
   // 主题 + 字体
   const [currentTheme, setCurrentTheme] = useState(loadTheme())
   const [currentFontSize, setCurrentFontSize] = useState(loadFontSize())
+  const [saveMsg, setSaveMsg] = useState('')
 
   if (!open) {
     return (
@@ -37,8 +38,6 @@ export default function SystemSettings() {
   }
 
   const close = () => setOpen(false)
-
-  const [saveMsg, setSaveMsg] = useState('')
 
   const handleSaveToLocal = () => {
     localStorage.setItem('adventure_api_config', JSON.stringify({
