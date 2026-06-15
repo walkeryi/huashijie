@@ -26,6 +26,13 @@ export const presetWorldCards: WorldCard[] = [
       { key: 'charm', name: '魅力', icon: '💬', initial: 3, max: 10 },
       { key: 'mechanical', name: '机械', icon: '🔧', initial: 4, max: 10 },
     ],
+    npcs: [
+      { id: 'old_mechanic', name: '老机械师陈', description: '铁鹰城退休首席机械师，对核心水晶了如指掌。脾气古怪但心肠不坏。', initialAffinity: 20 },
+      { id: 'guard_captain', name: '卫队长赵', description: '铁鹰城卫队长，忠于职守。对贵族不满但不敢公开对抗。', initialAffinity: 0 },
+      { id: 'sky_noble', name: '天空贵族洛', description: '年轻的贵族小姐，对机械和冒险充满好奇。是贵族中的异类。', initialAffinity: 10 },
+    ],
+    flags: ['found_crystal_clue', 'allied_with_mechanics', 'confronted_nobles', 'discovered_truth'],
+    startingItems: ['机械扳手', '残破的飞艇日志'],
   },
   {
     id: 'jade_dynasty',
@@ -53,5 +60,12 @@ export const presetWorldCards: WorldCard[] = [
       { key: 'charm', name: '风雅', icon: '🎋', initial: 4, max: 10 },
       { key: 'spirit', name: '灵力', icon: '✨', initial: 3, max: 10 },
     ],
+    npcs: [
+      { id: 'tea_master', name: '茶馆说书人柳', description: '京城茶馆的说书先生，消息灵通。似乎知道很多不该知道的事。', initialAffinity: 30 },
+      { id: 'spirit_guardian', name: '灵兽守护者青', description: '隐居山林的灵兽守护者，沉默寡言。对灵力的感知异常敏锐。', initialAffinity: 5 },
+      { id: 'court_official', name: '朝廷密使白', description: '奉旨追查龙脉异象的密使。表面冷漠，内心对朝廷的腐败深恶痛绝。', initialAffinity: -10 },
+    ],
+    flags: ['found_ancient_scroll', 'awakened_spirit_sense', 'exposed_corruption', 'reunited_last_beast'],
+    startingItems: ['泛黄的古卷', '铜钱 x5'],
   },
 ]
