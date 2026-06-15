@@ -61,3 +61,21 @@ button:where(:not([class*="no-theme"])) {
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeIn { animation: fadeIn 0.4s ease-out; }
+
+/* Autofill detection for API Key input — Layer 2 safeguard */
+@keyframes huashijie-autofill-detected {
+  from { outline-color: transparent; }
+  to { outline-color: transparent; }
+}
+@keyframes huashijie-autofill-cleared {
+  from { outline-color: transparent; }
+  to { outline-color: transparent; }
+}
+.huashijie-apikey:-webkit-autofill {
+  animation-name: huashijie-autofill-detected;
+  animation-duration: 0.01ms !important;
+}
+.huashijie-apikey:not(:-webkit-autofill) {
+  animation-name: huashijie-autofill-cleared;
+  animation-duration: 0.01ms !important;
+}

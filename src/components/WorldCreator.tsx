@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { WorldCard, AttributeDef, NPCDef, StoryBeat } from '@/lib/types'
 import { createEmptyCard, saveCustomCard } from '@/lib/custom-cards'
+import AccountButton from './AccountButton'
+import SystemSettings from './SystemSettings'
 
 type Tab = 'world' | 'attrs' | 'npcs' | 'items' | 'beats' | 'preview'
 
@@ -40,13 +42,21 @@ export default function WorldCreator() {
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-4">
       <div className="max-w-3xl mx-auto">
+        {/* 专属顶部栏 */}
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--border)]">
+          <button onClick={() => router.push('/')} className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
+            ← 返回
+          </button>
+          <div className="flex items-center gap-1">
+            <AccountButton inline />
+            <SystemSettings inline />
+          </div>
+        </div>
+
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">✨ 创作台</h1>
           <div className="flex gap-2">
-            <button onClick={() => router.push('/')} className="px-4 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
-              ← 返回
-            </button>
             <button onClick={handleSave} className="px-4 py-2 rounded-xl bg-[var(--accent)] text-black text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">
               {saved ? '✅ 已保存' : '💾 保存'}
             </button>

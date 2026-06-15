@@ -6,7 +6,7 @@ import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, a
 
 type TabType = 'theme' | 'api'
 
-export default function SystemSettings() {
+export default function SystemSettings({ inline }: { inline?: boolean }) {
   const { state, actions } = useGame()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabType>('theme')
@@ -34,12 +34,32 @@ export default function SystemSettings() {
   const [currentTheme, setCurrentTheme] = useState(loadTheme())
   const [currentFontSize, setCurrentFontSize] = useState(loadFontSize())
   const [showKey, setShowKey] = useState(false)
+  const autofillRef = useRef(false)
+
+  const handleApiKeyAnimationStart: React.AnimationEventHandler<HTMLInputElement> = (e) => {
+    if (e.animationName === 'huashijie-autofill-detected') {
+      autofillRef.current = true
+    } else if (e.animationName === 'huashijie-autofill-cleared') {
+      autofillRef.current = false
+    }
+  }
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (autofillRef.current) {
+      autofillRef.current = false // 复位
+      return // 拒绝自动填充的值
+    }
+    actions.setApiKey(e.target.value)
+  }
 
   if (!open) {
     return (
       <button
         onClick={() => { setOpen(true); setTab('theme') }}
-        className="fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center text-lg"
+        className={inline
+          ? 'w-10 h-10 flex items-center justify-center text-lg'
+          : 'fixed top-4 right-4 z-50 w-10 h-10 flex items-center justify-center text-lg'
+        }
         style={{
           borderRadius: 'var(--border-radius)',
           background: 'var(--bg-card)',
@@ -175,15 +195,17 @@ export default function SystemSettings() {
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
               <div className="relative">
-                <input type={showKey ? 'text' : 'password'} value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
-                  placeholder="sk-..."
+                <input type="text" value={state.apiKey} onChange={handleApiKeyChange}
+                  onAnimationStart={handleApiKeyAnimationStart}
+                  placeholder="sk-..." autoComplete="off"
                   style={{
+                    WebkitTextSecurity: showKey ? 'none' : 'disc',
                     border: 'var(--border-width) var(--border-style) var(--border)',
                     borderRadius: 'var(--border-radius)',
                     background: 'var(--bg-card)',
                     color: 'var(--text-primary)',
-                  }}
-                  className="w-full px-4 py-2.5 pr-10 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
+                  } as React.CSSProperties}
+                  className="huashijie-apikey w-full px-4 py-2.5 pr-10 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
                 <button onClick={() => setShowKey(!showKey)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-md text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--border)]/30 transition-colors"
                   title={showKey ? '隐藏' : '显示'}>

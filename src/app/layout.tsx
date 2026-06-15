@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { GameProvider } from '@/lib/game-context'
-import SystemSettings from '@/components/SystemSettings'
-import AccountButton from '@/components/AccountButton'
+import GlobalButtons from '@/components/GlobalButtons'
 import ThemeProvider from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
@@ -21,8 +20,7 @@ export default function RootLayout({
         <ThemeProvider>
           <GameProvider>
             {children}
-            <AccountButton />
-            <SystemSettings />
+            <GlobalButtons />
           </GameProvider>
         </ThemeProvider>
       </body>

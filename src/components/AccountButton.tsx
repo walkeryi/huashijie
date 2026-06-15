@@ -5,7 +5,7 @@ import { useGame } from '@/lib/game-context'
 import * as saveService from '@/lib/save-service'
 import { onlineRegister, onlineLogin } from '@/lib/online-storage'
 
-export default function AccountButton() {
+export default function AccountButton({ inline }: { inline?: boolean }) {
   const { state, actions } = useGame()
   const [mounted, setMounted] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
@@ -61,7 +61,10 @@ export default function AccountButton() {
     <>
       <button
         onClick={() => setShowPanel(true)}
-        className="fixed top-4 right-16 z-50 h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]"
+        className={inline
+          ? 'h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]'
+          : 'fixed top-4 right-16 z-50 h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]'
+        }
         title={mounted && isLoggedIn ? `☁️ ${state.accountName}` : '登录云端存档'}
       >
         {mounted ? (
