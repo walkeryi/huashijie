@@ -180,7 +180,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-start justify-center p-4 py-8">
-      <div className="w-full max-w-md shadow-2xl overflow-y-scroll h-[85vh]"
+      <div className="w-full max-w-md shadow-2xl flex flex-col overflow-hidden h-[85vh]"
         style={{
           background: 'var(--bg-secondary)',
           border: 'var(--border-width) var(--border-style) var(--border)',
@@ -210,9 +210,11 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
           >🔑 API</button>
         </div>
 
+        {/* 可滚动内容区 */}
+        <div className="overflow-y-scroll flex-1 px-6 py-6">
         {/* 主题标签 */}
         {tab === 'theme' && (
-          <div className="px-6 py-6 space-y-6">
+          <div className="space-y-6">
             {/* 主题配色 */}
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-3">主题风格</label>
@@ -267,7 +269,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
 
         {/* API 标签 */}
         {tab === 'api' && (
-          <div className="px-6 py-6 space-y-4">
+          <div className="space-y-4">
             {/* 预设供应商标题 */}
             <label className="block text-sm font-medium text-[var(--text-secondary)]">
               预设供应商
@@ -454,6 +456,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
           </div>
         )}
 
+        </div>
         {/* 关闭按钮 */}
         <div className="px-6 pb-6">
           <button onClick={close}
