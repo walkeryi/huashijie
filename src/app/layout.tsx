@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 import { GameProvider } from '@/lib/game-context'
 import SystemSettings from '@/components/SystemSettings'
+import AccountButton from '@/components/AccountButton'
 
 export const metadata: Metadata = {
   title: '话世界',
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <GameProvider>
           {children}
+          <AccountButton />
           <SystemSettings />
         </GameProvider>
       </body>
