@@ -2,17 +2,30 @@ import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { WorldCard, PlayerState, DialogueEntry, AIResponse } from '@/lib/types'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-})
+const API_TIMEOUT_MS = 30000
+
+function getAnthropicClient(): Anthropic {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('服务器配置错误：缺少 ANTHROPIC_API_KEY')
+  }
+  return new Anthropic({ apiKey })
+}
+
+function sanitizePlayerName(name: string): string {
+  // 防止提示注入：限制长度，过滤换行和特殊标记
+  return name.replace(/[\n\r\\]/g, '').slice(0, 50)
+}
 
 function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState): string {
-  const attrText = Object.entries(playerState.attributes)
+  const attrText = Object.entries(playerState.attributes ?? {})
     .map(([key, val]) => {
       const def = worldCard.attributes.find(a => a.key === key)
       return def ? `${def.icon} ${def.name}: ${val}/${def.max}` : `${key}: ${val}`
     })
     .join('\n')
+
+  const exampleAttr = worldCard.attributes[0]?.name ?? '属性'
 
   return `你是一个文字冒险游戏的叙事引擎。你必须严格遵循以下设定来运行游戏。
 
@@ -20,7 +33,7 @@ function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState): stri
 ${worldCard.description}
 
 ## 玩家当前状态
-- 姓名：${playerState.playerName}
+- 姓名：${sanitizePlayerName(playerState.playerName)}
 ${attrText}
 
 ## 你的职责
@@ -28,7 +41,7 @@ ${attrText}
 2. 描述场景、NPC 反应和事件发展
 3. 故事的走向应该受玩家属性影响——属性高的可以发现更多线索、说服NPC、克服困难
 4. 每次回复结束给出 2-4 个选项供玩家选择
-5. 选项可以需要属性条件（比如 ${worldCard.attributes[0]?.name ?? '属性'} >= 5 才能选的选项）
+5. 选项可以需要属性条件（比如 ${exampleAttr} >= 5 才能选的选项）
 
 ## 输出格式
 你必须严格按照以下 JSON 格式输出（不要包含 markdown 代码块标记，只输出纯 JSON）：
@@ -51,6 +64,51 @@ ${attrText}
 - 不要输出"未完待续"这类元叙述`
 }
 
+function extractTextFromResponse(response: Anthropic.Message): string {
+  const firstBlock = response.content[0]
+  if (!firstBlock || firstBlock.type !== 'text') {
+    throw new Error('AI 返回了非预期的响应格式')
+  }
+  return firstBlock.text
+}
+
+function parseAIResponse(text: string): AIResponse {
+  // 尝试直接解析 JSON
+  try {
+    return JSON.parse(text.trim()) as AIResponse
+  } catch {
+    // 尝试从 markdown 代码块中提取
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[1].trim()) as AIResponse
+    }
+  }
+
+  // 降级：当作纯文本，生成默认选项
+  return {
+    narration: text.trim(),
+    options: [
+      { text: '继续前进' },
+      { text: '仔细观察周围' },
+      { text: '与附近的人交谈' },
+    ],
+    attributeChanges: {},
+  }
+}
+
+function validateAIResponse(response: AIResponse, fallbackText: string): AIResponse {
+  if (!response.narration) {
+    response.narration = fallbackText.trim()
+  }
+  if (!response.options || response.options.length === 0) {
+    response.options = [{ text: '继续...' }]
+  }
+  if (!response.attributeChanges) {
+    response.attributeChanges = {}
+  }
+  return response
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -60,14 +118,18 @@ export async function POST(request: NextRequest) {
       dialogueHistory: DialogueEntry[]
     }
 
+    // 输入验证
+    if (!worldCard || !playerState || !dialogueHistory) {
+      return NextResponse.json({ error: '请求体不完整' }, { status: 400 })
+    }
+
     // 构建消息历史
     const messages: Anthropic.MessageParam[] = []
 
-    // 将对话历史转为 messages
     for (const entry of dialogueHistory.slice(-12)) {
       if (entry.role === 'narrator') {
         messages.push({ role: 'assistant', content: entry.content })
-      } else {
+      } else if (entry.role === 'player') {
         messages.push({ role: 'user', content: `[玩家选择]: ${entry.content}` })
       }
     }
@@ -81,58 +143,40 @@ export async function POST(request: NextRequest) {
     }
 
     const systemPrompt = buildSystemPrompt(worldCard, playerState)
+    const anthropic = getAnthropicClient()
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages,
-    })
+    // 带超时的 API 调用
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT_MS)
 
-    // 解析 AI 响应
-    const text = (response.content[0] as { type: 'text'; text: string }).text
-    let aiResponse: AIResponse
-
+    let response: Anthropic.Message
     try {
-      // 尝试直接解析 JSON
-      aiResponse = JSON.parse(text.trim())
-    } catch {
-      // 尝试从 markdown 代码块中提取
-      const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-      if (jsonMatch) {
-        aiResponse = JSON.parse(jsonMatch[1].trim())
-      } else {
-        // 降级：当作纯文本，生成默认选项
-        aiResponse = {
-          narration: text.trim(),
-          options: [
-            { text: '继续前进' },
-            { text: '仔细观察周围' },
-            { text: '与附近的人交谈' },
-          ],
-          attributeChanges: {},
-        }
-      }
+      response = await anthropic.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages,
+      })
+    } finally {
+      clearTimeout(timeoutId)
     }
 
-    // 验证字段
-    if (!aiResponse.narration) {
-      aiResponse.narration = text.trim()
-    }
-    if (!aiResponse.options || aiResponse.options.length === 0) {
-      aiResponse.options = [{ text: '继续...' }]
-    }
-    if (!aiResponse.attributeChanges) {
-      aiResponse.attributeChanges = {}
-    }
+    // 解析并验证 AI 响应
+    const text = extractTextFromResponse(response)
+    const aiResponse = parseAIResponse(text)
+    validateAIResponse(aiResponse, text)
 
     return NextResponse.json(aiResponse)
   } catch (error: unknown) {
+    // 只记录日志，不向客户端泄漏内部错误详情
     const message = error instanceof Error ? error.message : String(error)
     console.error('API Error:', message)
-    return NextResponse.json(
-      { error: message || '内部错误' },
-      { status: 500 }
-    )
+
+    // 区分超时错误
+    if (error instanceof Error && error.name === 'AbortError') {
+      return NextResponse.json({ error: 'AI 响应超时，请重试' }, { status: 504 })
+    }
+
+    return NextResponse.json({ error: '内部服务器错误' }, { status: 500 })
   }
 }
