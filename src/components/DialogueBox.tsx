@@ -3,13 +3,13 @@
 import { useRef, useEffect, useState } from 'react'
 import { useGame } from '@/lib/game-context'
 
-function getModelInfo(model?: string): { icon: string; label: string } | null {
+function getModelIcon(model?: string): string | null {
   if (!model) return null
   const m = model.toLowerCase()
-  if (m.includes('deepseek')) return { icon: '/icons/deepseek.svg', label: 'DeepSeek' }
-  if (m.includes('claude') || m.includes('anthropic')) return { icon: '/icons/claude.svg', label: 'Claude' }
-  if (m.includes('gpt') || m.includes('openai') || m.includes('o1') || m.includes('o3') || m.includes('o4')) return { icon: '/icons/openai.svg', label: 'OpenAI' }
-  return { icon: '/icons/custom-model.svg', label: model }
+  if (m.includes('deepseek')) return '/icons/deepseek.svg'
+  if (m.includes('claude') || m.includes('anthropic')) return '/icons/claude.svg'
+  if (m.includes('gpt') || m.includes('openai') || m.includes('o1') || m.includes('o3') || m.includes('o4')) return '/icons/openai.svg'
+  return '/icons/custom-model.svg'
 }
 
 export default function DialogueBox() {
@@ -67,38 +67,37 @@ export default function DialogueBox() {
       {/* Dialogue History */}
       {dialogueHistory.map((entry) => {
         const isPlayer = entry.role === 'player'
+        const modelIcon = !isPlayer ? getModelIcon(entry.model) : null
         return (
           <div
             key={entry.id}
             className={`flex ${isPlayer ? 'justify-end' : 'justify-start'}`}
           >
-            <div
-              className={`max-w-[80%] p-3 rounded-lg border ${
-                isPlayer
-                  ? 'border-[var(--accent)] bg-[var(--bg-card)]'
-                  : 'border-[var(--border)] bg-[var(--bg-secondary)]'
-              }`}
-            >
-              {isPlayer && (
-                <div className="text-xs text-[var(--accent)] mb-1 font-medium">
-                  你
+            <div className={`${isPlayer ? '' : 'max-w-[80%]'}`}>
+              {/* 模型标签 — 气泡上方 */}
+              {modelIcon && entry.model && (
+                <div className="flex items-center gap-1.5 mb-1 ml-1">
+                  <img src={modelIcon} alt={entry.model} className="w-4 h-4" />
+                  <span className="text-[11px] text-[var(--text-secondary)]">{entry.model}</span>
                 </div>
               )}
-              <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                {entry.content}
-              </div>
-              {!isPlayer && entry.model && (() => {
-                const info = getModelInfo(entry.model)
-                if (!info) return null
-                return (
-                  <div className="flex items-center justify-end mt-2">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--bg-primary)]/50 border border-[var(--border)]">
-                      <img src={info.icon} alt={info.label} className="w-5 h-5" />
-                      <span className="text-[11px] text-[var(--text-secondary)] leading-none">{info.label}</span>
-                    </div>
+
+              <div
+                className={`p-3 rounded-lg border ${
+                  isPlayer
+                    ? 'max-w-[80%] border-[var(--accent)] bg-[var(--bg-card)]'
+                    : 'border-[var(--border)] bg-[var(--bg-secondary)]'
+                }`}
+              >
+                {isPlayer && (
+                  <div className="text-xs text-[var(--accent)] mb-1 font-medium">
+                    你
                   </div>
-                )
-              })()}
+                )}
+                <div className="text-sm leading-relaxed whitespace-pre-wrap">
+                  {entry.content}
+                </div>
+              </div>
             </div>
           </div>
         )
