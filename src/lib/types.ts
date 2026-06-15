@@ -219,7 +219,7 @@ export type GameAction =
   | { type: 'SET_PROVIDER_NAME'; name: string }
   | { type: 'SET_API_BASE_URL'; url: string }
   | { type: 'SET_ADVANCED_PARAMS'; params: Partial<AdvancedParams> }
-  | { type: 'APPLY_PRESET'; preset: PresetProvider }
+  | { type: 'APPLY_PRESET'; preset: PresetProvider; apiKey?: string; model?: string; customBaseURL?: string; protocol?: Protocol; providerName?: string; apiBaseURL?: string; advancedParams?: AdvancedParams }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_RESPONSE'; response: AIResponse; playerEntry: DialogueEntry }
   | { type: 'SET_ERROR'; error: string }

@@ -68,12 +68,38 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
   return {}
 }
 
+// 修复历史污染：旧版 bug 会把同一把 apiKey 存到所有 provider 下
+function migratePollutedApiConfigs(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const configs = loadAllApiConfigs()
+    const providers: ApiProvider[] = ['anthropic', 'openai', 'deepseek', 'custom']
+    const nonEmpty: { p: ApiProvider; key: string }[] = []
+    for (const p of providers) {
+      const k = configs[p]?.apiKey || ''
+      if (k.length > 0) nonEmpty.push({ p, key: k })
+    }
+    // 2个以上非空，且全部相同 → 污染数据
+    if (nonEmpty.length >= 2 && nonEmpty.every(e => e.key === nonEmpty[0].key)) {
+      console.log('[迁移] 检测到 apiKey 污染，清理中...')
+      const last = loadLastProvider()
+      for (const p of providers) {
+        if (p !== last && configs[p]) {
+          configs[p].apiKey = ''
+        }
+      }
+      saveAllApiConfigs(configs)
+      console.log('[迁移] 完成，仅保留', last, '的 apiKey')
+    }
+  } catch {}
+}
+
 function saveAllApiConfigs(configs: Record<string, SavedApiConfig>): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(API_CONFIGS_KEY, JSON.stringify(configs))
 }
 
-function loadApiConfigForProvider(provider: ApiProvider): SavedApiConfig {
+export function loadApiConfigForProvider(provider: ApiProvider): SavedApiConfig {
   const configs = loadAllApiConfigs()
   const defaults: Record<ApiProvider, SavedApiConfig> = {
     anthropic: { apiKey: '', model: 'claude-sonnet-4-6', customBaseURL: '', protocol: 'anthropic', providerName: '', apiBaseURL: '', advancedParams: {} },
@@ -104,6 +130,7 @@ function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: s
 }
 
 export function createInitialState(): GameState {
+  migratePollutedApiConfigs() // 修复旧版 bug 导致的 apiKey 污染
   const provider = loadLastProvider()
   const saved = loadApiConfigForProvider(provider)
   const saveCfg = loadSaveModeConfig()
@@ -209,14 +236,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const defaultAdv: AdvancedParams = action.preset.protocol === 'anthropic'
         ? { max_tokens: 4096, temperature: 0.7, top_p: 1, top_k: 40 }
         : { thinking: 'enabled', reasoning_effort: 'high', stream: false, temperature: 0.7, max_tokens: 4096, top_p: 1 }
+      console.log('[Reducer] APPLY_PRESET:', action.preset.id, 'apiKey传入:', (action.apiKey || '(空)').slice(0,20), '原apiKey:', state.apiKey.slice(0,20))
       return {
         ...state,
         provider: action.preset.provider,
-        providerName: action.preset.name,
-        model: action.preset.defaultModel,
-        apiBaseURL: action.preset.apiBaseURL,
-        protocol: action.preset.protocol,
-        advancedParams: defaultAdv,
+        providerName: action.providerName ?? action.preset.name,
+        apiKey: action.apiKey ?? '',
+        model: action.model ?? action.preset.defaultModel,
+        apiBaseURL: action.apiBaseURL ?? action.preset.apiBaseURL,
+        customBaseURL: action.customBaseURL ?? '',
+        protocol: action.protocol ?? action.preset.protocol,
+        advancedParams: action.advancedParams ?? defaultAdv,
       }
     }
 

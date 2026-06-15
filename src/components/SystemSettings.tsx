@@ -1,12 +1,41 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useGame } from '@/lib/game-context'
+import { useGame, loadApiConfigForProvider } from '@/lib/game-context'
 import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 import { ModelIcon } from '@lobehub/icons'
 import type { Protocol, PresetProvider } from '@/lib/types'
 
 type TabType = 'theme' | 'api'
+
+// ========== 自定义预设 ==========
+
+interface CustomPreset {
+  id: string
+  name: string
+  provider: 'custom'
+  apiKey: string
+  apiBaseURL: string
+  model: string
+  protocol: Protocol
+  advancedParams?: Record<string, unknown>
+}
+
+const CUSTOM_PRESETS_KEY = 'adventure_custom_presets'
+
+function loadCustomPresets(): CustomPreset[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(CUSTOM_PRESETS_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {}
+  return []
+}
+
+function saveCustomPresets(presets: CustomPreset[]): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(presets))
+}
 
 // ========== 预设供应商定义 ==========
 
@@ -29,8 +58,8 @@ const PRESETS: PresetDef[] = [
 
 // ========== 高级选项子组件 ==========
 
-function AdvancedSelect({ label, value, options, onChange }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void
+function AdvancedSelect({ label, value, options, labels, onChange }: {
+  label: string; value: string; options: string[]; labels?: Record<string, string>; onChange: (v: string) => void
 }) {
   const selectStyle: React.CSSProperties = {
     border: 'var(--border-width) var(--border-style) var(--border)',
@@ -43,7 +72,7 @@ function AdvancedSelect({ label, value, options, onChange }: {
       <label className="block text-xs text-[var(--text-secondary)] mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full px-3 py-2 rounded-lg text-sm outline-none" style={selectStyle}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {options.map(o => <option key={o} value={o}>{labels?.[o] ?? o}</option>)}
       </select>
     </div>
   )
@@ -110,6 +139,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
   const [currentTheme, setCurrentTheme] = useState(loadTheme())
   const [currentFontSize, setCurrentFontSize] = useState(loadFontSize())
   const [showKey, setShowKey] = useState(false)
+  const [customPresets, setCustomPresets] = useState<CustomPreset[]>(loadCustomPresets)
   const autofillRef = useRef(false)
 
   const handleApiKeyAnimationStart: React.AnimationEventHandler<HTMLInputElement> = (e) => {
@@ -153,15 +183,26 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
   const handleTest = async () => {
     if (!state.apiKey) { setTestStatus('fail'); setTestMessage('请先输入 API Key'); return }
     setTestStatus('testing'); setTestMessage('')
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 10000)
     try {
       const res = await fetch('/api/test-connection', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey: state.apiKey, provider: state.provider, model: state.model, customBaseURL: state.customBaseURL }),
+        signal: controller.signal,
       })
+      clearTimeout(timer)
       const data = await res.json()
       if (data.ok) { setTestStatus('ok'); setTestMessage(`连接成功 · ${data.latency}ms`) }
       else { setTestStatus('fail'); setTestMessage(data.error || '连接失败') }
-    } catch { setTestStatus('fail'); setTestMessage('网络错误') }
+    } catch (e: unknown) {
+      clearTimeout(timer)
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        setTestStatus('fail'); setTestMessage('连接超时（10秒）')
+      } else {
+        setTestStatus('fail'); setTestMessage('网络错误')
+      }
+    }
   }
 
   const handleThemeChange = (id: string) => {
@@ -187,8 +228,8 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
           borderRadius: 'var(--border-radius)',
         }}>
 
-        {/* 标签栏 */}
-        <div className="flex border-b px-6 pt-6"
+        {/* 标签栏 + 关闭按钮 */}
+        <div className="flex items-center border-b px-6 pt-6"
           style={{ borderColor: 'var(--border)' } as React.CSSProperties}>
           <button onClick={() => setTab('theme')}
             className={`px-4 py-2 text-sm font-medium transition-colors relative -mb-[var(--border-width)] ${
@@ -208,6 +249,15 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
               borderRadius: 'calc(var(--border-radius) - 0.25rem) calc(var(--border-radius) - 0.25rem) 0 0',
             } : {}}
           >🔑 API</button>
+          {/* 右上角关闭按钮 */}
+          <button onClick={close}
+            className="ml-auto text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors p-1"
+            title="关闭">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="5" y1="5" x2="15" y2="15" />
+              <line x1="15" y1="5" x2="5" y2="15" />
+            </svg>
+          </button>
         </div>
 
         {/* 可滚动内容区 */}
@@ -276,18 +326,29 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
             </label>
 
             {/* 预设按钮 */}
-            <div className="flex gap-2">
-              {PRESETS.map(p => {
-                const active = state.provider === p.provider && state.providerName === p.name
+            <div className="flex flex-wrap gap-2">
+              {/* 三个硬编码预设 */}
+              {PRESETS.filter(p => p.id !== 'custom').map(p => {
+                const active = state.provider === p.provider
                 return (
                   <button key={p.id}
                     onClick={() => {
+                      const saved = loadApiConfigForProvider(p.provider)
                       const preset: PresetProvider = {
                         id: p.id, name: p.name, provider: p.provider,
                         apiBaseURL: p.apiBaseURL, defaultModel: p.defaultModel,
                         protocol: p.protocol, icon: p.modelKey,
                       }
-                      dispatch({ type: 'APPLY_PRESET', preset })
+                      dispatch({
+                        type: 'APPLY_PRESET', preset,
+                        apiKey: saved.apiKey,
+                        model: saved.model || p.defaultModel,
+                        customBaseURL: saved.customBaseURL || '',
+                        protocol: saved.protocol || p.protocol,
+                        providerName: saved.providerName || p.name,
+                        apiBaseURL: saved.apiBaseURL || p.apiBaseURL,
+                        advancedParams: Object.keys(saved.advancedParams || {}).length > 0 ? saved.advancedParams : undefined,
+                      })
                     }}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
                       active
@@ -304,6 +365,86 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
                   </button>
                 )
               })}
+              {/* 自定义预设 */}
+              {customPresets.map(cp => {
+                const active = state.provider === 'custom' && state.providerName === cp.name
+                return (
+                  <button key={cp.id}
+                    onClick={() => {
+                      const preset: PresetProvider = {
+                        id: 'custom', name: cp.name, provider: 'custom',
+                        apiBaseURL: cp.apiBaseURL, defaultModel: cp.model,
+                        protocol: cp.protocol, icon: '',
+                      }
+                      dispatch({
+                        type: 'APPLY_PRESET', preset,
+                        apiKey: cp.apiKey,
+                        model: cp.model,
+                        customBaseURL: '',
+                        protocol: cp.protocol,
+                        providerName: cp.name,
+                        apiBaseURL: cp.apiBaseURL,
+                        advancedParams: cp.advancedParams as Record<string, unknown> | undefined,
+                      })
+                    }}
+                    className={`group inline-flex items-center gap-1.5 pl-3 pr-1 py-1.5 rounded-full text-xs transition-all ${
+                      active
+                        ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-card)]'
+                        : 'bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] border border-[var(--border)]'
+                    }`}
+                  >
+                    <span className="text-[var(--text-primary)] text-[11px] leading-tight">{cp.name}</span>
+                    <span onClick={(e) => {
+                      e.stopPropagation()
+                      const updated = customPresets.filter(x => x.id !== cp.id)
+                      setCustomPresets(updated)
+                      saveCustomPresets(updated)
+                      // 如果删除的是当前激活的，切到默认自定义
+                      if (active) {
+                        const preset: PresetProvider = {
+                          id: 'custom', name: '自定义', provider: 'custom',
+                          apiBaseURL: '', defaultModel: '', protocol: 'openai', icon: '',
+                        }
+                        dispatch({ type: 'APPLY_PRESET', preset, apiKey: '', model: '', customBaseURL: '', protocol: 'openai', providerName: '', apiBaseURL: '' })
+                      }
+                    }}
+                      className="w-5 h-5 flex items-center justify-center rounded-full text-[var(--text-secondary)] hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                      title="删除">
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+                        <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
+                      </svg>
+                    </span>
+                  </button>
+                )
+              })}
+              {/* 自定义按钮（固定最后） */}
+              {(() => {
+                const p = PRESETS.find(x => x.id === 'custom')!
+                const active = state.provider === 'custom' && !customPresets.some(cp => cp.name === state.providerName)
+                return (
+                  <button key="custom"
+                    onClick={() => {
+                      const preset: PresetProvider = {
+                        id: p.id, name: p.name, provider: p.provider,
+                        apiBaseURL: p.apiBaseURL, defaultModel: p.defaultModel,
+                        protocol: p.protocol, icon: p.modelKey,
+                      }
+                      dispatch({
+                        type: 'APPLY_PRESET', preset,
+                        apiKey: '', model: '', customBaseURL: '', protocol: 'openai', providerName: '', apiBaseURL: '',
+                      })
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
+                      active
+                        ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-card)]'
+                        : 'bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] border border-[var(--border)]'
+                    }`}
+                  >
+                    <div className="w-[18px] h-[18px] flex items-center justify-center text-sm">⚙️</div>
+                    <span className="text-[var(--text-primary)] text-[11px] leading-tight">自定义</span>
+                  </button>
+                )
+              })()}
             </div>
 
             {/* 供应商名称 */}
@@ -323,11 +464,11 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
 
             {/* API Key */}
             <div>
-              <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
+              <label className="block text-sm text-[var(--text-secondary)] mb-1">API 密钥</label>
               <div className="relative">
                 <input type="text" value={state.apiKey} onChange={handleApiKeyChange}
                   onAnimationStart={handleApiKeyAnimationStart}
-                  placeholder="sk-..." autoComplete="off"
+                  placeholder="请先选择预设供应商，再输入密钥" autoComplete="off"
                   style={{
                     WebkitTextSecurity: showKey ? 'none' : 'disc',
                     border: 'var(--border-width) var(--border-style) var(--border)',
@@ -395,45 +536,53 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-2">协议兼容</label>
               <div className="flex gap-2">
-                {(['openai', 'anthropic'] as Protocol[]).map(p => (
-                  <button key={p}
-                    onClick={() => dispatch({ type: 'SET_PROTOCOL', protocol: p })}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
-                      state.protocol === p
+                {([
+                  { key: 'openai' as Protocol, label: 'OpenAI 兼容', modelKey: 'gpt-4o' },
+                  { key: 'anthropic' as Protocol, label: 'Anthropic', modelKey: 'claude-sonnet-4-6' },
+                ].map(p => (
+                  <button key={p.key}
+                    onClick={() => dispatch({ type: 'SET_PROTOCOL', protocol: p.key })}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
+                      state.protocol === p.key
                         ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-card)] text-[var(--text-primary)]'
-                        : 'bg-[var(--bg-card)]/50 text-[var(--text-secondary)] hover:text-[var(--text-primary)] border border-[var(--border)]'
+                        : 'bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                     }`}>
-                    {p === 'openai' ? '🧬 OpenAI 兼容' : '🔷 Anthropic'}
+                    <ModelIcon model={p.modelKey} size={18} type="color" />
+                    {p.label}
                   </button>
-                ))}
+                )))}
               </div>
             </div>
 
             {/* 高级参数 — OpenAI 协议 */}
             {state.protocol === 'openai' ? (
               <>
-                <AdvancedSelect label="Thinking" value={state.advancedParams?.thinking ?? 'enabled'} options={['enabled', 'disabled']}
-                  onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { thinking: v as 'enabled' | 'disabled' } })} />
-                <AdvancedSelect label="Reasoning Effort" value={state.advancedParams?.reasoning_effort ?? 'high'} options={['low', 'medium', 'high']}
+                <AdvancedSelect label="推理力度" value={state.advancedParams?.reasoning_effort ?? 'high'} options={['low', 'medium', 'high']}
+                  labels={{ low: '低', medium: '中', high: '高' }}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { reasoning_effort: v as 'low' | 'medium' | 'high' } })} />
-                <AdvancedToggle label="Stream" value={state.advancedParams?.stream ?? false}
+                <AdvancedToggle label="流式输出" value={state.advancedParams?.stream ?? false}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { stream: v } })} />
-                <AdvancedNumber label="Temperature" value={state.advancedParams?.temperature ?? 0.7} min={0} max={2} step={0.1}
+                <AdvancedNumber label="温度" value={state.advancedParams?.temperature ?? 0.7} min={0} max={2} step={0.1}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { temperature: v } })} />
-                <AdvancedNumber label="Max Tokens" value={state.advancedParams?.max_tokens ?? 4096} min={1} max={128000}
+                <AdvancedNumber label="最大令牌数" value={state.advancedParams?.max_tokens ?? 4096} min={1} max={128000}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { max_tokens: v } })} />
-                <AdvancedNumber label="Top P" value={state.advancedParams?.top_p ?? 1} min={0} max={1} step={0.05}
+                <AdvancedNumber label="核采样" value={state.advancedParams?.top_p ?? 1} min={0} max={1} step={0.05}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { top_p: v } })} />
               </>
             ) : (
               <>
-                <AdvancedNumber label="Max Tokens" value={state.advancedParams?.max_tokens ?? 4096} min={1} max={128000}
+                <AdvancedSelect label="思考模式" value={state.advancedParams?.thinking ?? 'enabled'} options={['enabled', 'disabled']}
+                  labels={{ enabled: '启用', disabled: '禁用' }}
+                  onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { thinking: v as 'enabled' | 'disabled' } })} />
+                <AdvancedToggle label="流式输出" value={state.advancedParams?.stream ?? false}
+                  onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { stream: v } })} />
+                <AdvancedNumber label="最大令牌数" value={state.advancedParams?.max_tokens ?? 4096} min={1} max={128000}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { max_tokens: v } })} />
-                <AdvancedNumber label="Temperature" value={state.advancedParams?.temperature ?? 0.7} min={0} max={1} step={0.1}
+                <AdvancedNumber label="温度" value={state.advancedParams?.temperature ?? 0.7} min={0} max={1} step={0.1}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { temperature: v } })} />
-                <AdvancedNumber label="Top P" value={state.advancedParams?.top_p ?? 1} min={0} max={1} step={0.05}
+                <AdvancedNumber label="核采样" value={state.advancedParams?.top_p ?? 1} min={0} max={1} step={0.05}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { top_p: v } })} />
-                <AdvancedNumber label="Top K" value={state.advancedParams?.top_k ?? 40} min={0} max={100}
+                <AdvancedNumber label="候选数" value={state.advancedParams?.top_k ?? 40} min={0} max={100}
                   onChange={v => dispatch({ type: 'SET_ADVANCED_PARAMS', params: { top_k: v } })} />
               </>
             )}
@@ -453,21 +602,43 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
                 <span className={`text-sm ${testStatus === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{testMessage}</span>
               )}
             </div>
+
+            {/* 添加供应商 — 仅自定义模式 */}
+            {state.provider === 'custom' && (
+              <button
+                onClick={() => {
+                  const name = state.providerName.trim()
+                  if (!name) { setTestStatus('fail'); setTestMessage('请先填写供应商名称'); return }
+                  if (customPresets.some(cp => cp.name === name)) { setTestStatus('fail'); setTestMessage('该名称已存在'); return }
+                  const cp: CustomPreset = {
+                    id: 'custom_' + Date.now(),
+                    name,
+                    provider: 'custom',
+                    apiKey: state.apiKey,
+                    apiBaseURL: state.apiBaseURL,
+                    model: state.model,
+                    protocol: state.protocol,
+                    advancedParams: state.advancedParams as Record<string, unknown>,
+                  }
+                  const updated = [...customPresets, cp]
+                  setCustomPresets(updated)
+                  saveCustomPresets(updated)
+                  setTestStatus('ok'); setTestMessage(`已添加「${name}」`)
+                  setTimeout(() => setTestStatus('idle'), 2000)
+                }}
+                style={{
+                  border: 'var(--border-width) var(--border-style) var(--accent)',
+                  borderRadius: 'var(--border-radius)',
+                  color: 'var(--accent)',
+                }}
+                className="w-full py-2.5 text-sm font-medium transition-colors hover:bg-[var(--accent)]/10"
+              >
+                + 添加供应商
+              </button>
+            )}
           </div>
         )}
 
-        </div>
-        {/* 关闭按钮 */}
-        <div className="px-6 pb-6">
-          <button onClick={close}
-            style={{
-              border: 'var(--border-width) var(--border-style) var(--border)',
-              borderRadius: 'var(--border-radius)',
-              color: 'var(--text-secondary)',
-            }}
-            className="w-full py-2.5 text-sm transition-colors hover:text-[var(--text-primary)]">
-            关闭
-          </button>
         </div>
       </div>
     </div>
