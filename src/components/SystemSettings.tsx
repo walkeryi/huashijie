@@ -38,6 +38,19 @@ export default function SystemSettings() {
 
   const close = () => setOpen(false)
 
+  const [saveMsg, setSaveMsg] = useState('')
+
+  const handleSaveToLocal = () => {
+    localStorage.setItem('adventure_api_config', JSON.stringify({
+      apiKey: state.apiKey,
+      provider: state.provider,
+      model: state.model,
+      customBaseURL: state.customBaseURL,
+    }))
+    setSaveMsg('✅ 已保存')
+    setTimeout(() => setSaveMsg(''), 2000)
+  }
+
   const handleTest = async () => {
     if (!state.apiKey) { setTestStatus('fail'); setTestMessage('请先输入 API Key'); return }
     setTestStatus('testing'); setTestMessage('')
@@ -230,8 +243,21 @@ export default function SystemSettings() {
                 className="px-4 py-2 text-sm font-medium transition-colors hover:border-[var(--accent)] disabled:opacity-50">
                 {testStatus === 'testing' ? '⏳ 测试中...' : '🧪 测试连接'}
               </button>
+              <button onClick={handleSaveToLocal}
+                style={{
+                  border: 'var(--border-width) var(--border-style) var(--accent)',
+                  borderRadius: 'var(--border-radius)',
+                  background: 'var(--accent)',
+                  color: 'var(--bg-primary)',
+                }}
+                className="px-4 py-2 text-sm font-medium transition-colors hover:opacity-80">
+                💾 保存到本地
+              </button>
               {testMessage && (
                 <span className={`text-sm ${testStatus === 'ok' ? 'text-green-400' : 'text-red-400'}`}>{testMessage}</span>
+              )}
+              {saveMsg && (
+                <span className="text-sm text-green-400">{saveMsg}</span>
               )}
             </div>
           </div>
