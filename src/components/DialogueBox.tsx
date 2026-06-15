@@ -2,15 +2,7 @@
 
 import { useRef, useEffect, useState } from 'react'
 import { useGame } from '@/lib/game-context'
-
-function getModelIcon(model?: string): string | null {
-  if (!model) return null
-  const m = model.toLowerCase()
-  if (m.includes('deepseek')) return '/icons/deepseek.svg'
-  if (m.includes('claude') || m.includes('anthropic')) return '/icons/claude.svg'
-  if (m.includes('gpt') || m.includes('openai') || m.includes('o1') || m.includes('o3') || m.includes('o4')) return '/icons/openai.svg'
-  return '/icons/custom-model.svg'
-}
+import { ModelIcon } from '@lobehub/icons'
 
 export default function DialogueBox() {
   const { state } = useGame()
@@ -67,7 +59,6 @@ export default function DialogueBox() {
       {/* Dialogue History */}
       {dialogueHistory.map((entry) => {
         const isPlayer = entry.role === 'player'
-        const modelIcon = !isPlayer ? getModelIcon(entry.model) : null
         return (
           <div
             key={entry.id}
@@ -75,10 +66,10 @@ export default function DialogueBox() {
           >
             <div className={`${isPlayer ? '' : 'max-w-[80%]'}`}>
               {/* 模型标签 — 气泡上方 */}
-              {modelIcon && entry.model && (
+              {!isPlayer && entry.model && (
                 <div className="flex items-center gap-1.5 mb-1 ml-1">
-                  <img src={modelIcon} alt={entry.model} className="w-4 h-4" />
-                  <span className="text-[11px] text-[var(--text-secondary)]">{entry.model}</span>
+                  <ModelIcon model={entry.model} size={32} />
+                  <span className="text-base text-[var(--text-secondary)]">{entry.model}</span>
                 </div>
               )}
 
