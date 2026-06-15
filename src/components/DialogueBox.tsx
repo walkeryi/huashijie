@@ -12,7 +12,12 @@ export default function DialogueBox() {
 
   const [displayedText, setDisplayedText] = useState('')
   const [typingIndex, setTypingIndex] = useState(0)
-  const [isTyping, setIsTyping] = useState(false)
+
+  // Derive typing state instead of managing it separately — avoids the bug
+  // where a shorter narration resets isTyping to false permanently.
+  const isTyping = currentNarration
+    ? displayedText.length < currentNarration.length
+    : false
 
   // Reset typewriter when currentNarration changes to a new value
   useEffect(() => {
@@ -20,16 +25,12 @@ export default function DialogueBox() {
       lastNarrationRef.current = currentNarration
       setDisplayedText('')
       setTypingIndex(0)
-      setIsTyping(true)
     }
   }, [currentNarration])
 
   // Typewriter effect: advance one character at ~40ms
   useEffect(() => {
     if (!currentNarration || typingIndex >= currentNarration.length) {
-      if (currentNarration && typingIndex >= currentNarration.length) {
-        setIsTyping(false)
-      }
       return
     }
 
