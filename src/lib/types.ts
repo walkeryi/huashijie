@@ -87,6 +87,30 @@ export const PRESET_NPC_FIELDS: NPCFieldMeta[] = [
   { key: 'initialAffinity', label: '初始好感度', desc: '角色初始好感值，范围-100~100，默认0', type: 'number', fixed: true, runtimeRequired: false, nullable: true },
 ]
 
+// ========== API 高级设置 ==========
+
+export type Protocol = 'openai' | 'anthropic'
+
+export interface AdvancedParams {
+  thinking?: 'enabled' | 'disabled'
+  reasoning_effort?: 'low' | 'medium' | 'high'
+  stream?: boolean
+  temperature?: number
+  max_tokens?: number
+  top_p?: number
+  top_k?: number
+}
+
+export interface PresetProvider {
+  id: string
+  name: string
+  provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'
+  apiBaseURL: string
+  defaultModel: string
+  protocol: Protocol
+  icon: string
+}
+
 // ========== 游戏状态 ==========
 
 export interface DialogueEntry {
@@ -155,6 +179,10 @@ export interface GameState {
   provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'
   model: string
   customBaseURL: string
+  protocol: Protocol
+  providerName: string
+  apiBaseURL: string
+  advancedParams: AdvancedParams
   npcAffinities: Record<string, number>
   npcRuntime: Record<string, RuntimeNPCState>
   saveMode: SaveMode
@@ -187,6 +215,11 @@ export type GameAction =
   | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'; apiKey?: string; model?: string; customBaseURL?: string }
   | { type: 'SET_MODEL'; model: string }
   | { type: 'SET_CUSTOM_BASE_URL'; baseURL: string }
+  | { type: 'SET_PROTOCOL'; protocol: Protocol }
+  | { type: 'SET_PROVIDER_NAME'; name: string }
+  | { type: 'SET_API_BASE_URL'; url: string }
+  | { type: 'SET_ADVANCED_PARAMS'; params: Partial<AdvancedParams> }
+  | { type: 'APPLY_PRESET'; preset: PresetProvider }
   | { type: 'SET_LOADING'; isLoading: boolean }
   | { type: 'SET_RESPONSE'; response: AIResponse; playerEntry: DialogueEntry }
   | { type: 'SET_ERROR'; error: string }

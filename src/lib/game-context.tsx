@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState, AttributeDef,
+  Protocol, AdvancedParams,
 } from './types'
 import * as saveService from './save-service'
 
@@ -33,6 +34,10 @@ interface SavedApiConfig {
   apiKey: string
   model: string
   customBaseURL: string
+  protocol: Protocol
+  providerName: string
+  apiBaseURL: string
+  advancedParams: AdvancedParams
 }
 
 const API_CONFIGS_KEY = 'adventure_api_configs'
@@ -54,7 +59,7 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
       const parsed = JSON.parse(old)
       const configs: Record<string, SavedApiConfig> = {}
       const provider = parsed.provider || 'deepseek'
-      configs[provider] = { apiKey: parsed.apiKey || '', model: parsed.model || '', customBaseURL: parsed.customBaseURL || '' }
+      configs[provider] = { apiKey: parsed.apiKey || '', model: parsed.model || '', customBaseURL: parsed.customBaseURL || '', protocol: provider === 'anthropic' ? 'anthropic' : 'openai', providerName: '', apiBaseURL: '', advancedParams: {} }
       localStorage.setItem(API_CONFIGS_KEY, JSON.stringify(configs))
       localStorage.removeItem('adventure_api_config')
       return configs
@@ -71,10 +76,10 @@ function saveAllApiConfigs(configs: Record<string, SavedApiConfig>): void {
 function loadApiConfigForProvider(provider: ApiProvider): SavedApiConfig {
   const configs = loadAllApiConfigs()
   const defaults: Record<ApiProvider, SavedApiConfig> = {
-    anthropic: { apiKey: '', model: 'claude-sonnet-4-6', customBaseURL: '' },
-    openai: { apiKey: '', model: 'gpt-4o', customBaseURL: '' },
-    deepseek: { apiKey: '', model: 'deepseek-chat', customBaseURL: '' },
-    custom: { apiKey: '', model: '', customBaseURL: '' },
+    anthropic: { apiKey: '', model: 'claude-sonnet-4-6', customBaseURL: '', protocol: 'anthropic', providerName: '', apiBaseURL: '', advancedParams: {} },
+    openai: { apiKey: '', model: 'gpt-4o', customBaseURL: '', protocol: 'openai', providerName: '', apiBaseURL: '', advancedParams: {} },
+    deepseek: { apiKey: '', model: 'deepseek-chat', customBaseURL: '', protocol: 'openai', providerName: '', apiBaseURL: '', advancedParams: {} },
+    custom: { apiKey: '', model: '', customBaseURL: '', protocol: 'openai', providerName: '', apiBaseURL: '', advancedParams: {} },
   }
   return { ...defaults[provider], ...configs[provider] }
 }
@@ -116,6 +121,10 @@ export function createInitialState(): GameState {
     provider: provider as GameState['provider'],
     model: saved.model,
     customBaseURL: saved.customBaseURL,
+    protocol: saved.protocol,
+    providerName: saved.providerName,
+    apiBaseURL: saved.apiBaseURL,
+    advancedParams: saved.advancedParams,
     npcAffinities: {},
     npcRuntime: {},
     saveMode: saveCfg.saveMode,
@@ -503,7 +512,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     console.log('[API] 自动保存:', state.provider, state.apiKey.slice(0,12)+'...')
     const configs = loadAllApiConfigs()
     delete configs['undefined']; delete configs['null']
-    configs[state.provider] = { apiKey: state.apiKey, model: state.model, customBaseURL: state.customBaseURL }
+    configs[state.provider] = { apiKey: state.apiKey, model: state.model, customBaseURL: state.customBaseURL, protocol: state.protocol, providerName: state.providerName, apiBaseURL: state.apiBaseURL, advancedParams: state.advancedParams }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
