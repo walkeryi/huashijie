@@ -129,7 +129,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       // Apply inventory changes
-      let newInventory = [...state.playerState!.inventory]
+      let newInventory = [...(state.playerState!.inventory ?? [])]
       for (const item of response.itemsGained) {
         if (!newInventory.includes(item)) {
           newInventory.push(item)
