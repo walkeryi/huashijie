@@ -38,16 +38,23 @@ interface SavedApiConfig {
 const API_CONFIGS_KEY = 'adventure_api_configs'
 
 function loadAllApiConfigs(): Record<string, SavedApiConfig> {
-  if (typeof window === 'undefined') return {}
+  if (typeof window === 'undefined') { console.log('🔍 1. loadAllApiConfigs: SSR, 返回{}'); return {} }
   try {
     const raw = localStorage.getItem(API_CONFIGS_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {}
-  // 迁移旧格式 adventure_api_config → adventure_api_configs
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      console.log('🔍 2. 读取到 adventure_api_configs:', JSON.stringify(parsed))
+      // 清理无效键
+      if (parsed['undefined']) { delete parsed['undefined']; console.log('🔍 2a. 删除了undefined键') }
+      if (parsed['null']) { delete parsed['null']; console.log('🔍 2b. 删除了null键') }
+      return parsed
+    }
+  } catch { console.log('🔍 3. 解析新格式失败') }
   try {
     const old = localStorage.getItem('adventure_api_config')
     if (old) {
       const parsed = JSON.parse(old)
+      console.log('🔍 4. 迁移旧格式:', JSON.stringify(parsed))
       const configs: Record<string, SavedApiConfig> = {}
       const provider = parsed.provider || 'deepseek'
       configs[provider] = {
@@ -60,6 +67,7 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
       return configs
     }
   } catch {}
+  console.log('🔍 5. 无任何存储数据')
   return {}
 }
 
@@ -101,6 +109,7 @@ function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: s
 export function createInitialState(): GameState {
   const provider = loadLastProvider()
   const saved = loadApiConfigForProvider(provider)
+  console.log('🔍 A. createInitialState: provider=', provider, 'apiKey=', saved.apiKey ? saved.apiKey.slice(0,15)+'...' : '(空)', 'model=', saved.model)
   const saveCfg = loadSaveModeConfig()
   return {
     screen: 'menu',
@@ -473,11 +482,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
   useEffect(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined') { console.log('🔍 S. autoSave: SSR, skip'); return }
+    console.log('🔍 S. autoSave 触发: provider=', state.provider, 'apiKey=', state.apiKey ? state.apiKey.slice(0,15)+'...' : '(空)', 'model=', state.model)
     // 防止空/无效 provider
-    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
+    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) {
+      console.log('🔍 S. autoSave: 无效provider, 跳过')
+      return
+    }
     const configs = loadAllApiConfigs()
-    // 清理无效键
     delete configs['undefined']
     delete configs['null']
     configs[state.provider] = {
@@ -487,6 +499,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
+    console.log('🔍 S. autoSave: 已保存, 当前所有configs:', JSON.stringify(configs))
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
 
   const value: GameContextValue = useMemo(() => ({

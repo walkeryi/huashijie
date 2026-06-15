@@ -158,7 +158,10 @@ export default function SystemSettings() {
           <div className="px-6 py-6 space-y-3">
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
-              <input type="password" value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
+              <input type="password" value={state.apiKey} onChange={e => {
+                  console.log('🔍 INPUT: apiKey onChange, 新值长度=', e.target.value.length, '前5字符=', e.target.value.slice(0,5))
+                  actions.setApiKey(e.target.value)
+                }}
                 placeholder="sk-..."
                 style={{
                   border: 'var(--border-width) var(--border-style) var(--border)',
