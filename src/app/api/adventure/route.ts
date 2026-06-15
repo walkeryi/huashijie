@@ -24,13 +24,35 @@ function sanitizePlayerName(name: string): string {
   return name.replace(/[\n\r\\]/g, '').slice(0, 50)
 }
 
-export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState): string {
+export function buildSystemPrompt(worldCard: WorldCard, playerState: PlayerState, npcAffinities: Record<string, number> = {}): string {
   const attrText = Object.entries(playerState.attributes ?? {})
     .map(([key, val]) => {
       const def = worldCard.attributes.find(a => a.key === key)
       return def ? `${def.icon} ${def.name}: ${val}/${def.max}` : `${key}: ${val}`
     })
     .join('\n')
+
+  // NPC 关系
+  const npcText = worldCard.npcs.length > 0
+    ? worldCard.npcs.map(npc => {
+        const affinity = npcAffinities[npc.id] ?? npc.initialAffinity
+        return `👤 ${npc.name} (好感: ${affinity}/100)`
+      }).join('\n')
+    : '无'
+
+  // 物品栏
+  const inventoryText = playerState.inventory && playerState.inventory.length > 0
+    ? playerState.inventory.map(item => `- ${item}`).join('\n')
+    : '空'
+
+  // 已解锁旗标
+  const flagsText = playerState.flags
+    ? Object.entries(playerState.flags)
+        .filter(([, val]) => val === true)
+        .map(([key]) => `- ${key}`)
+        .join('\n')
+    : ''
+  const flagsDisplay = flagsText || '无'
 
   const exampleAttr = worldCard.attributes[0]?.name ?? '属性'
 
@@ -42,6 +64,15 @@ ${worldCard.description}
 ## 玩家当前状态
 - 姓名：${sanitizePlayerName(playerState.playerName)}
 ${attrText}
+
+## NPC 关系
+${npcText}
+
+## 物品栏
+${inventoryText}
+
+## 已解锁旗标
+${flagsDisplay}
 
 ## 你的职责
 1. 根据玩家的选择推进故事
@@ -59,13 +90,23 @@ ${attrText}
     {"text": "选项文本"},
     {"text": "需要属性条件的选项文本", "attributeChecks": {"courage": ">= 5"}}
   ],
-  "attributeChanges": {"courage": 2, "health": -1}
+  "attributeChanges": {"courage": 2},
+  "npcAffinityChanges": {"blacksmith": 5, "mage": -3},
+  "newFlags": ["found_allies"],
+  "lostFlags": [],
+  "itemsGained": ["rusty_key"],
+  "itemsLost": ["broken_sword"]
 }
 
 ## 重要规则
 - narration 使用中文，语言优美有画面感，但不要过于冗长（控制在 200-400 字）
 - options 提供 2-4 个有意义的选择，不要让玩家感觉"选什么都一样"
 - attributeChanges 是选择后的属性增减，只在合理时使用，大多数情况可以设为 {}
+- NPC 好感度随玩家行为变化，友善行为增加、冒犯行为减少，范围 0-100
+- 好感度高的 NPC 主动提供帮助、透露信息；好感度低的 NPC 拒绝交流或成为障碍
+- 物品在合理时消耗（itemsLost）或获得（itemsGained），影响后续可用选项
+- 旗标代表不可逆的世界变化，newFlags 添加、lostFlags 移除
+- npcAffinityChanges 只包含本次对话中有变化的 NPC，没有变化就设为 {}
 - 保持世界的内部一致性——记住之前发生的事
 - 不要代替玩家做选择
 - 不要输出"未完待续"这类元叙述`
@@ -89,6 +130,11 @@ function parseAIResponse(text: string): AIResponse {
       { text: '与附近的人交谈' },
     ],
     attributeChanges: {},
+    npcAffinityChanges: {},
+    newFlags: [],
+    lostFlags: [],
+    itemsGained: [],
+    itemsLost: [],
   }
 }
 
@@ -96,6 +142,11 @@ function validateAIResponse(response: AIResponse, fallbackText: string): AIRespo
   if (!response.narration) response.narration = fallbackText.trim()
   if (!response.options || response.options.length === 0) response.options = [{ text: '继续...' }]
   if (!response.attributeChanges) response.attributeChanges = {}
+  if (!response.npcAffinityChanges) response.npcAffinityChanges = {}
+  if (!response.newFlags) response.newFlags = []
+  if (!response.lostFlags) response.lostFlags = []
+  if (!response.itemsGained) response.itemsGained = []
+  if (!response.itemsLost) response.itemsLost = []
   return response
 }
 
@@ -184,10 +235,11 @@ async function callOpenAI(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { worldCard, playerState, dialogueHistory, apiKey: requestApiKey, provider: requestProvider, model: requestModel, customBaseURL } = body as {
+    const { worldCard, playerState, dialogueHistory, npcAffinities, apiKey: requestApiKey, provider: requestProvider, model: requestModel, customBaseURL } = body as {
       worldCard: WorldCard
       playerState: PlayerState
       dialogueHistory: DialogueEntry[]
+      npcAffinities?: Record<string, number>
       apiKey?: string
       provider?: Provider
       model?: string
@@ -200,7 +252,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = getApiKey(requestApiKey)
     const provider = requestProvider || detectProvider(apiKey)
-    const systemPrompt = buildSystemPrompt(worldCard, playerState)
+    const systemPrompt = buildSystemPrompt(worldCard, playerState, npcAffinities ?? {})
 
     // 带超时的 API 调用
     const controller = new AbortController()
