@@ -7,6 +7,7 @@ function makePlayerState(overrides?: Partial<PlayerState>): PlayerState {
     playerName: '测试者',
     attributes: { courage: 5 },
     flags: {},
+    inventory: [],
     ...overrides,
   }
 }

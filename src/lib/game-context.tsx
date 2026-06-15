@@ -52,6 +52,7 @@ export function createInitialState(): GameState {
     provider: saved.provider,
     model: saved.model,
     customBaseURL: saved.customBaseURL,
+    npcAffinities: {},
   }
 }
 
@@ -64,6 +65,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       action.worldCard.attributes.forEach(a => {
         attrs[a.key] = a.initial
       })
+      const npcAffinities: Record<string, number> = {}
+      action.worldCard.npcs.forEach(n => { npcAffinities[n.id] = n.initialAffinity })
       return {
         ...state,
         screen: 'playing',
@@ -72,7 +75,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           playerName: action.playerName,
           attributes: attrs,
           flags: {},
+          inventory: action.worldCard.startingItems,
         },
+        npcAffinities,
         dialogueHistory: [],
         currentOptions: [],
         currentNarration: '',
@@ -115,9 +120,41 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         state.worldCard!.attributes,
       )
 
+      // Apply npcAffinityChanges (clamp 0-100)
+      const newNpcAffinities = { ...state.npcAffinities }
+      for (const [key, delta] of Object.entries(response.npcAffinityChanges)) {
+        if (key in newNpcAffinities) {
+          newNpcAffinities[key] = Math.max(0, Math.min(newNpcAffinities[key] + delta, 100))
+        }
+      }
+
+      // Apply inventory changes
+      let newInventory = [...state.playerState!.inventory]
+      for (const item of response.itemsGained) {
+        if (!newInventory.includes(item)) {
+          newInventory.push(item)
+        }
+      }
+      newInventory = newInventory.filter(item => !response.itemsLost.includes(item))
+
+      // Apply flag changes
+      const newFlags = { ...state.playerState!.flags }
+      for (const flag of response.newFlags) {
+        newFlags[flag] = true
+      }
+      for (const flag of response.lostFlags) {
+        newFlags[flag] = false
+      }
+
       return {
         ...state,
-        playerState: { ...state.playerState!, attributes: newAttrs },
+        playerState: {
+          ...state.playerState!,
+          attributes: newAttrs,
+          inventory: newInventory,
+          flags: newFlags,
+        },
+        npcAffinities: newNpcAffinities,
         dialogueHistory: newHistory,
         currentOptions: response.options,
         currentNarration: response.narration,
@@ -149,6 +186,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'RETURN_TO_MENU':
       return createInitialState()
+
+    case 'INIT_NPC_AFFINITIES':
+      return { ...state, npcAffinities: action.affinities }
 
     default:
       return state
@@ -236,6 +276,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           provider: current.provider,
           model: current.model,
           customBaseURL: current.customBaseURL,
+          inventory: current.playerState.inventory,
+          npcAffinities: current.npcAffinities,
         }),
       })
 

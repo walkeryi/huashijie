@@ -14,6 +14,9 @@ function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
       { key: 'courage', name: '勇气', icon: '⚔️', initial: 3, max: 10 },
       { key: 'wisdom', name: '智慧', icon: '🧠', initial: 5, max: 10 },
     ],
+    npcs: [],
+    flags: [],
+    startingItems: [],
     ...overrides,
   }
 }
@@ -33,6 +36,8 @@ describe('gameReducer', () => {
     expect(next.playerState!.playerName).toBe('英雄')
     expect(next.playerState!.attributes).toEqual({ courage: 3, wisdom: 5 })
     expect(next.playerState!.flags).toEqual({})
+    expect(next.playerState!.inventory).toEqual([])
+    expect(next.npcAffinities).toEqual({})
   })
 
   it('resets dialogue and options on new game', () => {
@@ -69,7 +74,7 @@ describe('gameReducer', () => {
       ...createInitialState(),
       screen: 'playing',
       worldCard: makeWorldCard(),
-      playerState: { playerName: 't', attributes: { courage: 3, wisdom: 5 }, flags: {} },
+      playerState: { playerName: 't', attributes: { courage: 3, wisdom: 5 }, flags: {}, inventory: [] },
     }
     const action: GameAction = {
       type: 'SET_RESPONSE',
@@ -77,6 +82,11 @@ describe('gameReducer', () => {
         narration: '你走进大门。',
         options: [{ text: '继续' }],
         attributeChanges: {},
+        npcAffinityChanges: {},
+        newFlags: [],
+        lostFlags: [],
+        itemsGained: [],
+        itemsLost: [],
       },
       playerEntry: {
         id: 'p_001',
@@ -103,7 +113,7 @@ describe('gameReducer', () => {
       ...createInitialState(),
       screen: 'playing',
       worldCard: makeWorldCard(),
-      playerState: { playerName: 't', attributes: { courage: 3, wisdom: 5 }, flags: {} },
+      playerState: { playerName: 't', attributes: { courage: 3, wisdom: 5 }, flags: {}, inventory: [] },
     }
     const action: GameAction = {
       type: 'SET_RESPONSE',
@@ -111,6 +121,11 @@ describe('gameReducer', () => {
         narration: '你成功了！',
         options: [],
         attributeChanges: { courage: 2, wisdom: -1 },
+        npcAffinityChanges: {},
+        newFlags: [],
+        lostFlags: [],
+        itemsGained: [],
+        itemsLost: [],
       },
       playerEntry: { id: 'p', role: 'player', content: '试试', timestamp: 1 },
     }
@@ -125,7 +140,7 @@ describe('gameReducer', () => {
       ...createInitialState(),
       screen: 'playing',
       worldCard: makeWorldCard(),
-      playerState: { playerName: 't', attributes: { courage: 9, wisdom: 1 }, flags: {} },
+      playerState: { playerName: 't', attributes: { courage: 9, wisdom: 1 }, flags: {}, inventory: [] },
     }
     // courage max=10, try to add 5 → should clamp to 10
     // wisdom min=0, try to subtract 5 → should clamp to 0
@@ -135,6 +150,11 @@ describe('gameReducer', () => {
         narration: '',
         options: [],
         attributeChanges: { courage: 5, wisdom: -5 },
+        npcAffinityChanges: {},
+        newFlags: [],
+        lostFlags: [],
+        itemsGained: [],
+        itemsLost: [],
       },
       playerEntry: { id: 'p', role: 'player', content: '', timestamp: 1 },
     }
@@ -170,6 +190,7 @@ describe('gameReducer', () => {
         playerName: '老玩家',
         attributes: { courage: 7, wisdom: 3 },
         flags: { met_king: true },
+        inventory: [],
       },
       dialogueHistory: [
         { id: 'x', role: 'narrator' as const, content: '旧剧情', timestamp: 1 },
@@ -192,7 +213,7 @@ describe('gameReducer', () => {
       ...createInitialState(),
       screen: 'playing',
       worldCard: makeWorldCard(),
-      playerState: { playerName: 'x', attributes: {}, flags: {} },
+      playerState: { playerName: 'x', attributes: {}, flags: {}, inventory: [] },
     }
 
     const next = gameReducer(state, { type: 'RETURN_TO_MENU' })
@@ -207,7 +228,7 @@ describe('gameReducer', () => {
   it('updates save slots', () => {
     const state = createInitialState()
     const saves = [
-      { id: 'a', slotName: '档1', timestamp: 1, worldCardId: 'w', playerState: { playerName: '', attributes: {}, flags: {} }, dialogueHistory: [], apiKey: '' },
+      { id: 'a', slotName: '档1', timestamp: 1, worldCardId: 'w', playerState: { playerName: '', attributes: {}, flags: {}, inventory: [] }, dialogueHistory: [], apiKey: '' },
     ]
 
     const next = gameReducer(state, { type: 'REFRESH_SAVES', saves })
