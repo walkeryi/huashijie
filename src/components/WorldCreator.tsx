@@ -57,7 +57,7 @@ export default function WorldCreator() {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">✨ 创作台</h1>
-            <a href="/docs/玩家创作指南.md" target="_blank" className="text-xs text-[var(--accent)] hover:underline border border-[var(--accent)]/30 px-2 py-0.5 rounded-full">📖 创作指南</a>
+            <a href="/玩家创作指南.md" target="_blank" className="text-xs text-[var(--accent)] hover:underline border border-[var(--accent)]/30 px-2 py-0.5 rounded-full">📖 创作指南</a>
           </div>
           <div className="flex gap-2">
             <button onClick={handleSave} className="px-4 py-2 rounded-xl bg-[var(--accent)] text-black text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">
@@ -468,7 +468,7 @@ function BeatsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
     <div className="space-y-4">
       <p className="text-sm text-[var(--text-secondary)]">
         定义故事的结构。每个节拍是一个关键剧情节点。第一个节拍通常是开场场景，最后一个没有解锁目标。
-        参考<a href="/docs/玩家创作指南.md" className="text-[var(--accent)] hover:underline ml-1">创作指南</a>
+        参考<a href="/玩家创作指南.md" className="text-[var(--accent)] hover:underline ml-1">创作指南</a>
       </p>
       {card.storyBeats.length === 0 && <p className="text-sm text-[var(--text-secondary)]">暂无节拍。从开场场景开始添加。</p>}
       {card.storyBeats.map((beat, i) => (
