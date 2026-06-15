@@ -94,7 +94,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, customBaseURL: action.baseURL }
 
     case 'SET_LOADING':
-      return { ...state, isLoading: action.isLoading }
+      return { ...state, isLoading: action.isLoading, error: null }
 
     case 'SET_RESPONSE': {
       const { response, playerEntry } = action

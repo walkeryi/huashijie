@@ -38,6 +38,20 @@ export default function GameScreen() {
         {/* 主对话区 */}
         <div className="flex-1 flex flex-col min-w-0">
           <DialogueBox />
+
+          {/* 错误提示 */}
+          {state.error && (
+            <div className="mx-6 mb-3 p-3 rounded-xl bg-red-900/30 border border-red-800 text-red-300 text-sm">
+              {state.error}
+              <button
+                onClick={() => actions.submitAction('开始冒险')}
+                className="ml-3 underline hover:text-red-200"
+              >
+                重试
+              </button>
+            </div>
+          )}
+
           <OptionsPanel />
         </div>
 
