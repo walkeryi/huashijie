@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { GameProvider } from '@/lib/game-context'
+import SystemSettings from '@/components/SystemSettings'
 
 export const metadata: Metadata = {
   title: '陪你一起冒险',
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen">
         <GameProvider>
           {children}
+          <SystemSettings />
         </GameProvider>
       </body>
     </html>
