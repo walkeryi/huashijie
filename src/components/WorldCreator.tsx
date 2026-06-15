@@ -167,10 +167,8 @@ function AttrsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
 // 核心字段：不可删除
 const CORE_FIELD_KEYS = ['id', 'name', 'gender', 'origin', 'dialogueTone', 'initialAffinity']
 
-function fieldCategory(key: string): 'core' | 'preset' | 'custom' {
-  if (CORE_FIELD_KEYS.includes(key)) return 'core'
-  if (PRESET_NPC_FIELDS.some(f => f.key === key)) return 'preset'
-  return 'custom'
+function isCoreField(key: string): boolean {
+  return CORE_FIELD_KEYS.includes(key)
 }
 
 function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<WorldCard>) => void }) {
@@ -225,12 +223,12 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   }
 
   const deleteField = (npcId: string, fieldKey: string) => {
-    const cat = fieldCategory(fieldKey)
-    if (cat === 'core') return
+    if (isCoreField(fieldKey)) return
     update({
       npcs: card.npcs.map(n => {
         if (n.id !== npcId) return n
-        if (cat === 'preset') {
+        const isPreset = PRESET_NPC_FIELDS.some(f => f.key === fieldKey)
+        if (isPreset) {
           return { ...n, fields: { ...n.fields, ['_rm_' + fieldKey]: true } }
         }
         const fields = { ...n.fields }
@@ -269,17 +267,17 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   }
 
   const renderFieldRow = (npc: NPCDef, fieldKey: string) => {
-    const cat = fieldCategory(fieldKey)
+    const core = isCoreField(fieldKey)
     const preset = PRESET_NPC_FIELDS.find(f => f.key === fieldKey)
     const type = preset?.type ?? 'string'
     const value = npc.fields[fieldKey]
-    const showDelete = cat !== 'core'
+    const showDelete = !core
 
     const nameLabel = preset?.label ?? fieldKey
     const descHint = preset?.desc ?? (npc.fields._customMeta?.[fieldKey]?.desc ?? '')
 
-    const catBadge = cat === 'core' ? '🔒' : cat === 'preset' ? '📌' : '✨'
-    const catClass = cat === 'core' ? 'text-[var(--text-secondary)]' : cat === 'preset' ? 'text-[var(--accent)]' : 'text-green-400'
+    const catBadge = core ? '🔒' : '✨'
+    const catClass = core ? 'text-[var(--text-secondary)]' : 'text-green-400'
 
     const sharedInputClass = 'px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm'
 
