@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react'
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef, useMemo } from 'react'
 import {
   GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState, AttributeDef,
 } from './types'
@@ -252,7 +252,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     refreshSaves()
   }, [refreshSaves])
 
-  const value: GameContextValue = {
+  const value: GameContextValue = useMemo(() => ({
     state,
     dispatch,
     actions: {
@@ -264,7 +264,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       refreshSaves,
       returnToMenu,
     },
-  }
+  }), [state, dispatch, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
