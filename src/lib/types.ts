@@ -94,6 +94,7 @@ export interface DialogueEntry {
   role: 'narrator' | 'player'
   content: string
   timestamp: number
+  model?: string
 }
 
 export interface GameOption {

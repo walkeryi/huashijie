@@ -3,6 +3,15 @@
 import { useRef, useEffect, useState } from 'react'
 import { useGame } from '@/lib/game-context'
 
+function getModelInfo(model?: string): { icon: string; label: string } | null {
+  if (!model) return null
+  const m = model.toLowerCase()
+  if (m.includes('deepseek')) return { icon: '/icons/deepseek.svg', label: 'DeepSeek' }
+  if (m.includes('claude') || m.includes('anthropic')) return { icon: '/icons/claude.svg', label: 'Claude' }
+  if (m.includes('gpt') || m.includes('openai') || m.includes('o1') || m.includes('o3') || m.includes('o4')) return { icon: '/icons/openai.svg', label: 'OpenAI' }
+  return { icon: '/icons/custom-model.svg', label: model }
+}
+
 export default function DialogueBox() {
   const { state } = useGame()
   const { dialogueHistory, currentNarration, isLoading } = state
@@ -78,6 +87,16 @@ export default function DialogueBox() {
               <div className="text-sm leading-relaxed whitespace-pre-wrap">
                 {entry.content}
               </div>
+              {!isPlayer && entry.model && (() => {
+                const info = getModelInfo(entry.model)
+                if (!info) return null
+                return (
+                  <div className="flex items-center justify-end gap-1 mt-1.5 opacity-50">
+                    <img src={info.icon} alt={info.label} className="w-3.5 h-3.5" />
+                    <span className="text-[10px] text-[var(--text-secondary)]">{info.label}</span>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         )

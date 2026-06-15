@@ -193,6 +193,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           role: 'narrator' as const,
           content: response.narration,
           timestamp: Date.now(),
+          model: state.model,
         },
       ]
 
@@ -417,6 +418,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         role: 'narrator' as const,
         content: data.narration,
         timestamp: Date.now(),
+        model: current.model,
       }]
       const saveData: SaveData = {
         id: 'autosave',
