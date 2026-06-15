@@ -115,12 +115,6 @@ export default function HomePage() {
             📂 继续游戏
           </button>
 
-          <button
-            onClick={() => router.push('/creator')}
-            className="w-full py-3 rounded-xl border border-dashed border-[var(--border)] text-[var(--text-secondary)] text-sm hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-          >
-            ✨ 创建新世界
-          </button>
         </div>
 
         <p className="mt-12 text-xs text-[var(--text-secondary)]">
@@ -135,6 +129,11 @@ export default function HomePage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-8">
         <div className="w-full max-w-md">
+          <button onClick={() => setScreen('menu')}
+            className="px-4 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors mb-6">
+            ← 返回
+          </button>
+
           <h2 className="text-2xl font-bold mb-6 text-center text-[var(--text-primary)]">📂 继续游戏</h2>
 
           {saveSlots.length === 0 ? (
@@ -165,11 +164,6 @@ export default function HomePage() {
               ))}
             </div>
           )}
-
-          <button onClick={() => setScreen('menu')}
-            className="w-full py-3 rounded-lg border border-[var(--border)] text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
-            ← 返回
-          </button>
         </div>
       </div>
     )
@@ -179,12 +173,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-4xl">
-        <div className="text-center mb-4">
-          <button onClick={() => { setScreen('menu'); setSelectedCard(null) }}
-            className="text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-            ← 返回主菜单
-          </button>
-        </div>
+        <button onClick={() => { setScreen('menu'); setSelectedCard(null) }}
+          className="px-4 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors mb-4">
+          ← 返回
+        </button>
 
         <div className="text-center mb-6">
           <h2 className="text-3xl font-bold text-[var(--text-primary)] mb-1">选择世界</h2>
@@ -227,6 +219,17 @@ export default function HomePage() {
               </div>
             )
           })}
+        </div>
+
+        {/* 创建新世界入口 */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.push('/creator')}
+            className="w-full p-4 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] transition-all text-center"
+          >
+            <div className="text-2xl mb-1">✨</div>
+            <div className="text-sm text-[var(--text-secondary)]">创建一个新世界</div>
+          </button>
         </div>
 
         {/* 名字输入 + 开始按钮 */}

@@ -44,7 +44,7 @@ export default function WorldCreator() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">✨ 创作台</h1>
           <div className="flex gap-2">
-            <button onClick={() => router.push('/')} className="px-4 py-2 rounded-xl border border-[var(--border)] text-sm hover:bg-[var(--bg-card)] transition-colors">
+            <button onClick={() => router.push('/')} className="px-4 py-2 rounded-xl border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
               ← 返回
             </button>
             <button onClick={handleSave} className="px-4 py-2 rounded-xl bg-[var(--accent)] text-black text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">

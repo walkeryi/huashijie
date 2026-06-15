@@ -2,9 +2,7 @@
 
 import { useState } from 'react'
 import { useGame } from '@/lib/game-context'
-import * as saveService from '@/lib/save-service'
-import { onlineRegister, onlineLogin } from '@/lib/online-storage'
-import { localListSaves } from '@/lib/local-storage'
+import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 
 type SettingsPage = 'menu' | 'general' | 'api'
 
@@ -17,14 +15,9 @@ export default function SystemSettings() {
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
   const [testMessage, setTestMessage] = useState('')
 
-  // 账户
-  const [accountName, setAccountName] = useState('')
-  const [password, setPassword] = useState('')
-  const [storageStatus, setStorageStatus] = useState('')
-  const [migrating, setMigrating] = useState(false)
-  const [localSaveCount, setLocalSaveCount] = useState(0)
-
-  const isLoggedIn = saveService.isOnline() && !!saveService.getAccountName()
+  // 主题 + 字体
+  const [currentTheme, setCurrentTheme] = useState(loadTheme())
+  const [currentFontSize, setCurrentFontSize] = useState(loadFontSize())
 
   if (!open) {
     return (
@@ -54,55 +47,18 @@ export default function SystemSettings() {
     } catch { setTestStatus('fail'); setTestMessage('网络错误') }
   }
 
-  const handleRegister = async () => {
-    if (!accountName.trim() || !password) { setStorageStatus('请填写账户名和密码'); return }
-    setStorageStatus('注册中...')
-    try {
-      await onlineRegister(accountName.trim(), password)
-      saveService.savePassword(password)
-      saveService.setMode('online', accountName.trim())
-      actions.setSaveMode('online', accountName.trim())
-      setStorageStatus('✅ 注册成功，已登录')
-      setLocalSaveCount(localListSaves().length)
-    } catch (e: any) { setStorageStatus('❌ ' + (e.message || '注册失败')) }
+  const handleThemeChange = (id: string) => {
+    const theme = themes.find(t => t.id === id)
+    if (!theme) return
+    setCurrentTheme(id)
+    saveTheme(id)
+    applyTheme(theme)
   }
 
-  const handleLogin = async () => {
-    if (!accountName.trim() || !password) { setStorageStatus('请填写账户名和密码'); return }
-    setStorageStatus('登录中...')
-    try {
-      await onlineLogin(accountName.trim(), password)
-      saveService.savePassword(password)
-      saveService.setMode('online', accountName.trim())
-      actions.setSaveMode('online', accountName.trim())
-      setStorageStatus('✅ 登录成功')
-      setLocalSaveCount(localListSaves().length)
-    } catch (e: any) { setStorageStatus('❌ ' + (e.message || '登录失败')) }
-  }
-
-  const handleLogout = () => {
-    saveService.setMode('offline', '')
-    saveService.clearPassword()
-    actions.setSaveMode('offline', '')
-    setStorageStatus('已退出登录')
-    setLocalSaveCount(0)
-  }
-
-  const handleMigrate = async () => {
-    setMigrating(true); setStorageStatus('迁移中...')
-    try {
-      const result = await saveService.migrateLocalToOnline()
-      if (result.success) { setStorageStatus(`✅ 已迁移 ${result.count} 个存档`); setLocalSaveCount(0) }
-      else { setStorageStatus('❌ 迁移失败，请重试') }
-    } catch { setStorageStatus('❌ 迁移失败') }
-    finally { setMigrating(false) }
-  }
-
-  const handleSwitchOffline = () => {
-    saveService.setMode('offline', '')
-    saveService.clearPassword()
-    actions.setSaveMode('offline', '')
-    setStorageStatus('')
+  const handleFontSizeChange = (size: FontSize) => {
+    setCurrentFontSize(size)
+    saveFontSize(size)
+    applyFontSize(size)
   }
 
   return (
@@ -114,13 +70,11 @@ export default function SystemSettings() {
           <div>
             <h2 className="text-xl font-bold text-center text-[var(--text-primary)] pt-8 pb-2">⚙️ 设置</h2>
             <div className="px-6 py-6 space-y-3">
-              <button onClick={() => { setPage('general'); setLocalSaveCount(localListSaves().length); setStorageStatus('') }}
+              <button onClick={() => setPage('general')}
                 className="w-full py-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-left px-5 group">
                 <span className="text-2xl mr-3">👤</span>
                 <span className="text-lg font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition-colors">基础设置</span>
-                <span className="text-sm text-[var(--text-secondary)] ml-2">
-                  {isLoggedIn ? `☁️ ${state.accountName}` : '💾 离线模式'}
-                </span>
+                <span className="text-sm text-[var(--text-secondary)] ml-2">{themes.find(t => t.id === currentTheme)?.name} · {currentFontSize === 'small' ? '小' : currentFontSize === 'large' ? '大' : '中'}</span>
               </button>
 
               <button onClick={() => { setPage('api'); setTestStatus('idle'); setTestMessage('') }}
@@ -133,7 +87,7 @@ export default function SystemSettings() {
             <div className="px-6 pb-6">
               <button onClick={close}
                 className="w-full py-3 rounded-xl border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors text-sm">
-                返回
+                ← 返回
               </button>
             </div>
           </div>
@@ -142,63 +96,45 @@ export default function SystemSettings() {
         {/* === 基础设置 === */}
         {page === 'general' && (
           <div>
-            <div className="flex items-center px-5 pt-6 pb-4">
-              <button onClick={() => setPage('menu')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg mr-3">←</button>
+            <div className="flex items-center gap-3 px-5 pt-6 pb-4">
+              <button onClick={() => setPage('menu')}
+                className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
+                ← 返回
+              </button>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">👤 基础设置</h2>
             </div>
 
-            <div className="px-6 pb-6 space-y-4">
-              {/* 模式切换 */}
+            <div className="px-6 pb-6 space-y-6">
+              {/* 主题配色 */}
               <div>
-                <label className="block text-sm text-[var(--text-secondary)] mb-2">存档模式</label>
-                <div className="flex gap-2">
-                  <button onClick={handleSwitchOffline}
-                    className={`flex-1 py-2.5 rounded-xl text-sm border transition-colors ${!isLoggedIn ? 'border-[var(--accent)] bg-[var(--bg-card)] text-[var(--text-primary)]' : 'border-[var(--border)] text-[var(--text-secondary)]'}`}>
-                    💾 离线模式
-                  </button>
-                  <button className={`flex-1 py-2.5 rounded-xl text-sm border transition-colors ${isLoggedIn ? 'border-[var(--accent)] bg-[var(--bg-card)] text-[var(--text-primary)]' : 'border-[var(--border)] text-[var(--text-secondary)]'}`}>
-                    ☁️ 在线模式
-                  </button>
+                <label className="block text-sm text-[var(--text-secondary)] mb-3">主题配色</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {themes.map(t => (
+                    <button key={t.id} onClick={() => handleThemeChange(t.id)}
+                      className={`p-3 rounded-xl border-2 text-left transition-colors ${
+                        currentTheme === t.id ? 'border-[var(--accent)] bg-[var(--bg-card)]' : 'border-[var(--border)] hover:border-[var(--accent)]/50'
+                      }`}>
+                      <span className="text-lg">{t.emoji}</span>
+                      <span className="ml-2 text-sm font-medium text-[var(--text-primary)]">{t.name}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
 
-              {isLoggedIn ? (
-                <div className="space-y-3">
-                  <div className="text-center py-2">
-                    <p className="text-sm text-[var(--text-secondary)]">当前账户</p>
-                    <p className="text-lg font-bold text-[var(--text-primary)]">{state.accountName}</p>
-                    <p className="text-xs text-green-400">● 已连接</p>
-                  </div>
-                  <button onClick={handleLogout}
-                    className="w-full py-2.5 rounded-xl border border-red-800 text-red-400 text-sm hover:bg-red-900/20 transition-colors">退出登录</button>
-                  {localSaveCount > 0 && (
-                    <div className="pt-2 border-t border-[var(--border)]">
-                      <p className="text-sm text-[var(--text-secondary)] mb-2">检测到 {localSaveCount} 个本地存档</p>
-                      <button onClick={handleMigrate} disabled={migrating}
-                        className="w-full py-2.5 rounded-xl bg-[var(--accent)] text-[var(--bg-primary)] text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50">
-                        {migrating ? '迁移中...' : '☁️ 迁移到云端'}
-                      </button>
-                    </div>
-                  )}
+              {/* 字体大小 */}
+              <div>
+                <label className="block text-sm text-[var(--text-secondary)] mb-3">字体大小</label>
+                <div className="flex gap-2">
+                  {(['small','medium','large'] as FontSize[]).map(s => (
+                    <button key={s} onClick={() => handleFontSizeChange(s)}
+                      className={`flex-1 py-2.5 rounded-xl text-sm border transition-colors ${
+                        currentFontSize === s ? 'border-[var(--accent)] bg-[var(--bg-card)] text-[var(--text-primary)]' : 'border-[var(--border)] text-[var(--text-secondary)]'
+                      }`}>
+                      {{small:'小',medium:'中',large:'大'}[s]}
+                    </button>
+                  ))}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <input type="text" value={accountName} onChange={e => setAccountName(e.target.value)}
-                    placeholder="账户名" maxLength={50}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)]" />
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                    placeholder="密码" maxLength={100}
-                    className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)]" />
-                  <div className="flex gap-2">
-                    <button onClick={handleLogin}
-                      className="flex-1 py-2.5 rounded-xl bg-[var(--accent)] text-[var(--bg-primary)] text-sm font-medium hover:bg-[var(--accent-hover)] transition-colors">登录</button>
-                    <button onClick={handleRegister}
-                      className="flex-1 py-2.5 rounded-xl border border-[var(--accent)] text-[var(--accent)] text-sm font-medium hover:bg-[var(--bg-card)] transition-colors">注册</button>
-                  </div>
-                </div>
-              )}
-
-              {storageStatus && <p className="text-sm text-center text-[var(--text-secondary)]">{storageStatus}</p>}
+              </div>
             </div>
           </div>
         )}
@@ -206,8 +142,11 @@ export default function SystemSettings() {
         {/* === API 设置 === */}
         {page === 'api' && (
           <div>
-            <div className="flex items-center px-5 pt-6 pb-4">
-              <button onClick={() => setPage('menu')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-lg mr-3">←</button>
+            <div className="flex items-center gap-3 px-5 pt-6 pb-4">
+              <button onClick={() => setPage('menu')}
+                className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-sm text-[var(--text-primary)] hover:bg-[var(--bg-card)] transition-colors">
+                ← 返回
+              </button>
               <h2 className="text-lg font-bold text-[var(--text-primary)]">🔑 API 设置</h2>
             </div>
 

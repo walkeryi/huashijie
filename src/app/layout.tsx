@@ -3,6 +3,7 @@ import './globals.css'
 import { GameProvider } from '@/lib/game-context'
 import SystemSettings from '@/components/SystemSettings'
 import AccountButton from '@/components/AccountButton'
+import ThemeProvider from '@/components/ThemeProvider'
 
 export const metadata: Metadata = {
   title: '话世界',
@@ -17,11 +18,13 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body className="min-h-screen">
-        <GameProvider>
-          {children}
-          <AccountButton />
-          <SystemSettings />
-        </GameProvider>
+        <ThemeProvider>
+          <GameProvider>
+            {children}
+            <AccountButton />
+            <SystemSettings />
+          </GameProvider>
+        </ThemeProvider>
       </body>
     </html>
   )
