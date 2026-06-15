@@ -133,7 +133,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         attrs[a.key] = a.initial
       })
       const npcAffinities: Record<string, number> = {}
-      action.worldCard.npcs.forEach(n => { npcAffinities[n.id] = n.initialAffinity })
+      action.worldCard.npcs.forEach(n => { npcAffinities[n.id] = n.fields.initialAffinity ?? 0 })
+      const npcRuntime: Record<string, { currentSelfPerception: string; currentState: string }> = {}
+      action.worldCard.npcs.forEach(n => {
+        npcRuntime[n.id] = { currentSelfPerception: '', currentState: '' }
+      })
       return {
         ...state,
         screen: 'playing',
@@ -145,6 +149,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           inventory: action.worldCard.startingItems,
         },
         npcAffinities,
+        npcRuntime,
         dialogueHistory: [],
         currentOptions: [],
         currentNarration: '',
