@@ -27,7 +27,17 @@ function clampAttributes(
 
 // ========== 初始状态 ==========
 
+function loadApiConfig(): { apiKey: string; provider: GameState['provider']; model: string; customBaseURL: string } {
+  if (typeof window === 'undefined') return { apiKey: '', provider: 'anthropic', model: 'claude-sonnet-4-6', customBaseURL: '' }
+  try {
+    const raw = localStorage.getItem('adventure_api_config')
+    if (raw) return JSON.parse(raw)
+  } catch { /* ignore */ }
+  return { apiKey: '', provider: 'anthropic', model: 'claude-sonnet-4-6', customBaseURL: '' }
+}
+
 export function createInitialState(): GameState {
+  const saved = loadApiConfig()
   return {
     screen: 'menu',
     worldCard: null,
@@ -38,10 +48,10 @@ export function createInitialState(): GameState {
     isLoading: false,
     error: null,
     saveSlots: [],
-    apiKey: '',
-    provider: 'anthropic',
-    model: 'claude-sonnet-4-6',
-    customBaseURL: '',
+    apiKey: saved.apiKey,
+    provider: saved.provider,
+    model: saved.model,
+    customBaseURL: saved.customBaseURL,
   }
 }
 
@@ -291,6 +301,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     refreshSaves()
   }, [refreshSaves])
+
+  // 持久化 API 配置到 localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('adventure_api_config', JSON.stringify({
+        apiKey: state.apiKey,
+        provider: state.provider,
+        model: state.model,
+        customBaseURL: state.customBaseURL,
+      }))
+    }
+  }, [state.apiKey, state.provider, state.model, state.customBaseURL])
 
   const value: GameContextValue = useMemo(() => ({
     state,
