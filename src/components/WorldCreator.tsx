@@ -165,7 +165,8 @@ function AttrsTab({ card, update }: { card: WorldCard; update: (p: Partial<World
 // ====== 角色 ======
 
 const CORE_FIELD_KEYS = ['id', 'name', 'gender', 'origin', 'dialogueTone']
-const FIXED_FIELD_KEYS = ['birthday', 'dialogueExamples', 'personalityTags', 'appearance', 'currentAttire', 'initialAffinity']
+const FIXED_FIELD_KEYS = ['birthday', 'personalityTags', 'appearance', 'initialAffinity']
+// dialogueExamples / currentAttire 移出自定义——太具体不适合做预设
 
 function fieldCategory(key: string): 'core' | 'fixed' | 'custom' {
   if (CORE_FIELD_KEYS.includes(key)) return 'core'
@@ -184,7 +185,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   const ensureMainExists = () => {
     if (mainChar) return
     const id = 'npc_main_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {}, _deletedFixed: [] }
+    const fields: Record<string, any> = { id, _customMeta: {} }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -199,7 +200,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
 
   const addSideCharacter = () => {
     const id = 'npc_side_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {}, _deletedFixed: [] }
+    const fields: Record<string, any> = { id, _customMeta: {} }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -230,12 +231,9 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
         if (n.id !== npcId) return n
         const cat = fieldCategory(fieldKey)
         if (cat === 'fixed') {
-          // 标记为已删除，不再渲染
-          const deleted = [...(n.fields._deletedFixed ?? [])]
-          if (!deleted.includes(fieldKey)) deleted.push(fieldKey)
-          return { ...n, fields: { ...n.fields, _deletedFixed: deleted } }
+          return { ...n, fields: { ...n.fields, ['_rm_' + fieldKey]: true } }
         }
-        // custom: 直接移除
+        // custom: 直接删除 key
         const fields = { ...n.fields }
         delete fields[fieldKey]
         const meta = fields._customMeta ? { ...fields._customMeta } : {}
@@ -260,15 +258,15 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   }
 
   const getVisibleKeys = (npc: NPCDef): string[] => {
-    const deletedFixed: string[] = npc.fields._deletedFixed ?? []
-    // 核心字段
+    // 核心字段全部展示
     const core = CORE_FIELD_KEYS.filter(k => k !== 'isMainCharacter')
-    // 固定字段（排除已删除的）
-    const fixed = FIXED_FIELD_KEYS.filter(k => !deletedFixed.includes(k))
+    // 固定字段：排除被标记删除的
+    const fixed = FIXED_FIELD_KEYS.filter(k => !npc.fields['_rm_' + k])
     // 自定义字段
     const presetKeys = PRESET_NPC_FIELDS.map(f => f.key)
+    const metaKeys = ['_customMeta']
     const custom = Object.keys(npc.fields).filter(k =>
-      k !== '_customMeta' && k !== '_deletedFixed' && !presetKeys.includes(k)
+      !k.startsWith('_rm_') && !metaKeys.includes(k) && !presetKeys.includes(k)
     )
     return [...core, ...fixed, ...custom]
   }
