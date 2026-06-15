@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback, useEffect, u
 import {
   GameState, GameAction, WorldCard, AIResponse, SaveData, DialogueEntry, PlayerState, AttributeDef,
 } from './types'
-import { listSaves, saveToSlot, autoSave, deleteSave } from './storage'
+import * as saveService from './save-service'
 
 const DEFAULT_MAX_ATTRIBUTE = 10
 
@@ -36,8 +36,14 @@ function loadApiConfig(): { apiKey: string; provider: GameState['provider']; mod
   return { apiKey: '', provider: 'anthropic', model: 'claude-sonnet-4-6', customBaseURL: '' }
 }
 
+function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: string } {
+  const cfg = saveService.getModeConfig()
+  return { saveMode: cfg.mode, accountName: cfg.accountName }
+}
+
 export function createInitialState(): GameState {
   const saved = loadApiConfig()
+  const saveCfg = loadSaveModeConfig()
   return {
     screen: 'menu',
     worldCard: null,
@@ -53,6 +59,8 @@ export function createInitialState(): GameState {
     model: saved.model,
     customBaseURL: saved.customBaseURL,
     npcAffinities: {},
+    saveMode: saveCfg.saveMode,
+    accountName: saveCfg.accountName,
   }
 }
 
@@ -190,6 +198,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'INIT_NPC_AFFINITIES':
       return { ...state, npcAffinities: action.affinities }
 
+    case 'SET_SAVE_MODE':
+      return { ...state, saveMode: action.mode, accountName: action.accountName }
+
     default:
       return state
   }
@@ -207,11 +218,12 @@ interface GameContextValue {
     setCustomBaseURL: (url: string) => void
     startGame: (worldCard: WorldCard, playerName: string) => void
     submitAction: (optionText: string) => Promise<void>
-    saveGame: (slot: number, name: string) => void
+    saveGame: (slot: number, name: string) => Promise<void>
     loadGame: (save: SaveData, worldCard: WorldCard) => void
-    deleteGame: (slot: number) => void
-    refreshSaves: () => void
+    deleteGame: (slot: number) => Promise<void>
+    refreshSaves: () => Promise<void>
     returnToMenu: () => void
+    setSaveMode: (mode: 'offline' | 'online', accountName: string) => void
   }
 }
 
@@ -223,8 +235,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   stateRef.current = state
   const submittingRef = useRef(false)
 
-  const refreshSaves = useCallback(() => {
-    dispatch({ type: 'REFRESH_SAVES', saves: listSaves() })
+  const refreshSaves = useCallback(async () => {
+    try {
+      const metas = await saveService.listSaveMetas()
+      const saves: SaveData[] = metas.map(m => ({
+        id: m.id,
+        slotName: m.slotName,
+        timestamp: m.timestamp,
+        worldCardId: m.worldCardId,
+        playerState: { playerName: m.playerName, attributes: {}, flags: {}, inventory: [] },
+        dialogueHistory: [],
+        apiKey: '',
+      }))
+      dispatch({ type: 'REFRESH_SAVES', saves })
+    } catch {
+      // 列存档失败，保持现有列表
+    }
   }, [])
 
   const setApiKey = useCallback((key: string) => {
@@ -311,7 +337,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         content: data.narration,
         timestamp: Date.now(),
       }]
-      autoSave(current.worldCard.id, updatedPlayer, fullHistory, current.apiKey)
+      const saveData: SaveData = {
+        id: 'autosave',
+        slotName: '自动存档',
+        timestamp: Date.now(),
+        worldCardId: current.worldCard.id,
+        playerState: updatedPlayer,
+        dialogueHistory: fullHistory,
+        apiKey: current.apiKey,
+      }
+      saveService.autoSave(saveData).catch(() => {})
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e)
       dispatch({ type: 'SET_ERROR', error: message || '未知错误' })
@@ -320,24 +355,45 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const saveGame = useCallback((slot: number, name: string) => {
+  const saveGame = useCallback(async (slot: number, name: string) => {
     const current = stateRef.current
     if (!current.worldCard || !current.playerState) return
-    saveToSlot(slot, 'save_' + Date.now(), name, current.worldCard.id, current.playerState, current.dialogueHistory, current.apiKey)
-    refreshSaves()
+    const data: SaveData = {
+      id: 'save_' + Date.now(),
+      slotName: name,
+      timestamp: Date.now(),
+      worldCardId: current.worldCard.id,
+      playerState: current.playerState,
+      dialogueHistory: current.dialogueHistory,
+      apiKey: current.apiKey,
+    }
+    try {
+      await saveService.saveToSlot(slot, data)
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', error: '存档失败，请检查网络连接' })
+    }
+    await refreshSaves()
   }, [refreshSaves])
 
   const loadGame = useCallback((save: SaveData, worldCard: WorldCard) => {
     dispatch({ type: 'LOAD_SAVE', save, worldCard })
   }, [])
 
-  const deleteGame = useCallback((slot: number) => {
-    deleteSave(slot)
-    refreshSaves()
+  const deleteGame = useCallback(async (slot: number) => {
+    try {
+      await saveService.deleteSave(slot)
+    } catch (e) {
+      dispatch({ type: 'SET_ERROR', error: '删除失败，请检查网络连接' })
+    }
+    await refreshSaves()
   }, [refreshSaves])
 
   const returnToMenu = useCallback(() => {
     dispatch({ type: 'RETURN_TO_MENU' })
+  }, [])
+
+  const setSaveMode = useCallback((mode: 'offline' | 'online', accountName: string) => {
+    dispatch({ type: 'SET_SAVE_MODE', mode, accountName })
   }, [])
 
   useEffect(() => {
@@ -371,8 +427,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       deleteGame,
       refreshSaves,
       returnToMenu,
+      setSaveMode,
     },
-  }), [state, dispatch, setApiKey, setProvider, setModel, setCustomBaseURL, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
+  }), [state, dispatch, setApiKey, setProvider, setModel, setCustomBaseURL, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu, setSaveMode])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
