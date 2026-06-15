@@ -39,6 +39,7 @@ export function createInitialState(): GameState {
     error: null,
     saveSlots: [],
     apiKey: '',
+    provider: 'anthropic',
   }
 }
 
@@ -70,6 +71,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case 'SET_API_KEY':
       return { ...state, apiKey: action.apiKey }
+
+    case 'SET_PROVIDER':
+      return { ...state, provider: action.provider }
 
     case 'SET_LOADING':
       return { ...state, isLoading: action.isLoading }
@@ -140,6 +144,7 @@ interface GameContextValue {
   dispatch: React.Dispatch<GameAction>
   actions: {
     setApiKey: (key: string) => void
+    setProvider: (provider: 'anthropic' | 'openai' | 'deepseek') => void
     startGame: (worldCard: WorldCard, playerName: string) => void
     submitAction: (optionText: string) => Promise<void>
     saveGame: (slot: number, name: string) => void
@@ -164,6 +169,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const setApiKey = useCallback((key: string) => {
     dispatch({ type: 'SET_API_KEY', apiKey: key })
+  }, [])
+
+  const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek') => {
+    dispatch({ type: 'SET_PROVIDER', provider })
   }, [])
 
   const startGame = useCallback((worldCard: WorldCard, playerName: string) => {
@@ -196,6 +205,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           playerState: current.playerState,
           dialogueHistory: historyWithInput,
           apiKey: current.apiKey,
+          provider: current.provider,
         }),
       })
 
@@ -267,6 +277,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     dispatch,
     actions: {
       setApiKey,
+      setProvider,
       startGame,
       submitAction,
       saveGame,
@@ -275,7 +286,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       refreshSaves,
       returnToMenu,
     },
-  }), [state, dispatch, setApiKey, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
+  }), [state, dispatch, setApiKey, setProvider, startGame, submitAction, saveGame, loadGame, deleteGame, refreshSaves, returnToMenu])
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }

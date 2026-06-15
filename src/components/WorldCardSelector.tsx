@@ -122,15 +122,24 @@ export default function WorldCardSelector() {
           </p>
         </div>
 
-        {/* API Key Input */}
-        <div className="max-w-md mx-auto mb-8">
+        {/* API Key + Provider */}
+        <div className="max-w-md mx-auto mb-8 flex gap-2">
           <input
             type="password"
             value={state.apiKey}
             onChange={e => actions.setApiKey(e.target.value)}
-            placeholder="输入你的 Anthropic API Key"
-            className="w-full px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] transition-colors text-center"
+            placeholder="输入 API Key"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] placeholder-[var(--text-secondary)] transition-colors"
           />
+          <select
+            value={state.provider}
+            onChange={e => actions.setProvider(e.target.value as 'anthropic' | 'openai' | 'deepseek')}
+            className="px-3 py-2.5 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm text-[var(--text-primary)] transition-colors"
+          >
+            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
         </div>
 
         {/* World Card Grid */}
