@@ -1,12 +1,25 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useGame } from '@/lib/game-context'
 import DialogueBox from './DialogueBox'
 import OptionsPanel from './OptionsPanel'
 import StatusPanel from './StatusPanel'
 
 export default function GameScreen() {
-  const { state } = useGame()
+  const { state, actions } = useGame()
+
+  // 新游戏首次进入时触发 AI 生成开场
+  useEffect(() => {
+    if (
+      state.screen === 'playing' &&
+      state.dialogueHistory.length === 0 &&
+      !state.isLoading &&
+      state.currentOptions.length === 0
+    ) {
+      actions.submitAction('开始冒险')
+    }
+  }, [state.screen, state.dialogueHistory.length, state.isLoading, state.currentOptions.length, actions])
 
   if (state.screen !== 'playing') {
     return (
