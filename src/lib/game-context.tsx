@@ -117,6 +117,7 @@ export function createInitialState(): GameState {
     model: saved.model,
     customBaseURL: saved.customBaseURL,
     npcAffinities: {},
+    npcRuntime: {},
     saveMode: saveCfg.saveMode,
     accountName: saveCfg.accountName,
   }
