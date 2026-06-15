@@ -115,6 +115,28 @@ export interface GameState {
   model: string
   customBaseURL: string
   npcAffinities: Record<string, number>
+  saveMode: SaveMode
+  accountName: string
+}
+
+// ========== 存档模式 ==========
+
+export type SaveMode = 'offline' | 'online'
+
+/** 存储模式配置，持久化在 localStorage key: 'adventure_save_config' */
+export interface SaveModeConfig {
+  mode: SaveMode
+  accountName: string
+}
+
+/** 存档元数据（列表用，不含对话历史和 apiKey） */
+export interface SaveMeta {
+  slot: number
+  id: string
+  slotName: string
+  timestamp: number
+  worldCardId: string
+  playerName: string
 }
 
 export type GameAction =
@@ -131,3 +153,4 @@ export type GameAction =
   | { type: 'REFRESH_SAVES'; saves: SaveData[] }
   | { type: 'RETURN_TO_MENU' }
   | { type: 'INIT_NPC_AFFINITIES'; affinities: Record<string, number> }
+  | { type: 'SET_SAVE_MODE'; mode: SaveMode; accountName: string }
