@@ -175,7 +175,6 @@ function fieldCategory(key: string): 'core' | 'fixed' | 'custom' {
 
 function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<WorldCard>) => void }) {
   const [subTab, setSubTab] = useState<'main' | 'side'>('main')
-  // 两个空添加槽
   const [slot1, setSlot1] = useState({ name: '', desc: '' })
   const [slot2, setSlot2] = useState({ name: '', desc: '' })
 
@@ -185,7 +184,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   const ensureMainExists = () => {
     if (mainChar) return
     const id = 'npc_main_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {} }
+    const fields: Record<string, any> = { id, _customMeta: {}, _deletedFixed: [] }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -200,7 +199,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
 
   const addSideCharacter = () => {
     const id = 'npc_side_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {} }
+    const fields: Record<string, any> = { id, _customMeta: {}, _deletedFixed: [] }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -229,6 +228,14 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     update({
       npcs: card.npcs.map(n => {
         if (n.id !== npcId) return n
+        const cat = fieldCategory(fieldKey)
+        if (cat === 'fixed') {
+          // 标记为已删除，不再渲染
+          const deleted = [...(n.fields._deletedFixed ?? [])]
+          if (!deleted.includes(fieldKey)) deleted.push(fieldKey)
+          return { ...n, fields: { ...n.fields, _deletedFixed: deleted } }
+        }
+        // custom: 直接移除
         const fields = { ...n.fields }
         delete fields[fieldKey]
         const meta = fields._customMeta ? { ...fields._customMeta } : {}
@@ -252,10 +259,18 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     reset()
   }
 
-  const getAllFieldKeys = (npc: NPCDef): string[] => {
-    const presetKeys = PRESET_NPC_FIELDS.map(f => f.key).filter(k => k !== 'isMainCharacter')
-    const customKeys = Object.keys(npc.fields).filter(k => k !== '_customMeta' && !presetKeys.includes(k))
-    return [...presetKeys, ...customKeys]
+  const getVisibleKeys = (npc: NPCDef): string[] => {
+    const deletedFixed: string[] = npc.fields._deletedFixed ?? []
+    // 核心字段
+    const core = CORE_FIELD_KEYS.filter(k => k !== 'isMainCharacter')
+    // 固定字段（排除已删除的）
+    const fixed = FIXED_FIELD_KEYS.filter(k => !deletedFixed.includes(k))
+    // 自定义字段
+    const presetKeys = PRESET_NPC_FIELDS.map(f => f.key)
+    const custom = Object.keys(npc.fields).filter(k =>
+      k !== '_customMeta' && k !== '_deletedFixed' && !presetKeys.includes(k)
+    )
+    return [...core, ...fixed, ...custom]
   }
 
   const renderFieldRow = (npc: NPCDef, fieldKey: string) => {
@@ -264,100 +279,72 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     const type = preset?.type ?? 'string'
     const value = npc.fields[fieldKey]
     const showDelete = cat === 'fixed' || cat === 'custom'
-    const canEditName = cat === 'custom'
-    const canEditDesc = cat === 'fixed' || cat === 'custom'
 
     const nameLabel = preset?.label ?? fieldKey
-    const descText = cat === 'custom'
+    const descHint = cat === 'custom'
       ? (npc.fields._customMeta?.[fieldKey]?.desc ?? '')
       : (preset?.desc ?? '')
-    const catBadge = cat === 'core' ? '🔒核心' : cat === 'fixed' ? '📌固定' : '✨自定义'
+
+    const catBadge = cat === 'core' ? '🔒' : cat === 'fixed' ? '📌' : '✨'
+    const catClass = cat === 'core' ? 'text-[var(--text-secondary)]' : cat === 'fixed' ? 'text-[var(--accent)]' : 'text-green-400'
+
+    const sharedInputClass = 'px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] focus:border-[var(--accent)] outline-none text-sm'
 
     const valueInput = type === 'boolean' ? (
-      <input type="checkbox" checked={!!value} onChange={e => updateField(npc.id, fieldKey, e.target.checked)} className="rounded" />
+      <input type="checkbox" checked={!!value} onChange={e => updateField(npc.id, fieldKey, e.target.checked)} className="rounded ml-2" />
     ) : type === 'number' ? (
       <input type="number" value={value ?? 0} onChange={e => updateField(npc.id, fieldKey, Number(e.target.value))}
-        className="w-24 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-sm text-center"
+        className={`w-20 ${sharedInputClass} text-center`}
         {...(fieldKey === 'initialAffinity' ? { min: -100, max: 100 } : {})} />
     ) : type === 'string[]' ? (
-      <input value={Array.isArray(value) ? value.join(', ') : ''} onChange={e => updateField(npc.id, fieldKey, e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
-        placeholder="逗号分隔" className="flex-1 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-sm" />
+      <input value={Array.isArray(value) ? value.join(', ') : ''}
+        onChange={e => updateField(npc.id, fieldKey, e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
+        placeholder="逗号分隔" className={`flex-1 ${sharedInputClass}`} />
     ) : fieldKey === 'dialogueExamples' ? (
       <textarea value={value ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)} rows={2}
-        className="flex-1 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-xs resize-y" />
+        placeholder={preset?.desc ?? ''} className={`flex-1 ${sharedInputClass} resize-y text-xs`} />
     ) : (
       <input value={value ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)}
-        className="flex-1 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-[var(--border)] text-sm" />
+        placeholder={descHint || undefined} className={`flex-1 ${sharedInputClass}`} />
     )
 
     return (
-      <div key={fieldKey} className="flex items-center gap-2 text-sm">
-        {/* 字段名 */}
-        {canEditName ? (
-          <input value={fieldKey} onChange={e => {/* rename handled separately */}}
-            className="w-20 shrink-0 px-1 py-1 rounded bg-transparent border border-dashed border-[var(--border)] text-xs font-mono" />
-        ) : (
-          <span className="w-20 shrink-0 text-xs text-[var(--text-secondary)] truncate">{nameLabel}</span>
-        )}
-        {/* 分类标签 */}
-        <span className="shrink-0 text-[10px] px-1 py-0.5 rounded bg-[var(--bg-primary)] text-[var(--text-secondary)]">{catBadge}</span>
-        {/* 说明 */}
-        {canEditDesc ? (
-          <input value={descText} onChange={e => {
-            if (cat === 'custom') {
-              const meta = { ...(npc.fields._customMeta ?? {}) }
-              meta[fieldKey] = { desc: e.target.value }
-              updateField(npc.id, '_customMeta', meta)
-            } else {
-              // fixed field desc edit: store as override in _customMeta too, or just update preset?
-              // For simplicity: fixed field desc edits are stored in _customMeta override
-              const meta = { ...(npc.fields._customMeta ?? {}) }
-              meta[fieldKey] = { ...(meta[fieldKey] ?? {}), desc: e.target.value }
-              updateField(npc.id, '_customMeta', meta)
-            }
-          }}
-            className="w-24 shrink-0 px-1 py-1 rounded bg-transparent border border-dashed border-[var(--border)] text-[10px] text-[var(--text-secondary)]"
-            placeholder="说明或示例" />
-        ) : (
-          <span className="w-24 shrink-0 text-[10px] text-[var(--text-secondary)] truncate" title={descText}>{descText}</span>
-        )}
-        {/* 值 */}
-        <div className="flex-1">{valueInput}</div>
-        {/* 删除 */}
+      <div key={fieldKey} className="flex items-center gap-1.5 text-sm">
+        <span className={`shrink-0 text-xs w-5 text-center ${catClass}`} title={cat === 'core' ? '核心' : cat === 'fixed' ? '固定' : '自定义'}>{catBadge}</span>
+        <span className="shrink-0 w-16 text-xs text-[var(--text-secondary)] truncate" title={nameLabel}>{nameLabel}</span>
+        <div className="flex-1 flex items-center">{valueInput}</div>
         {showDelete && (
-          <button onClick={() => deleteField(npc.id, fieldKey)} className="shrink-0 text-red-400 hover:text-red-300 text-xs">✕</button>
+          <button onClick={() => deleteField(npc.id, fieldKey)} className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-[var(--text-secondary)] hover:text-red-400 hover:bg-red-400/10 text-xs">✕</button>
         )}
       </div>
     )
   }
 
   const renderCharacterCard = (npc: NPCDef, showDelete: boolean) => {
-    const allKeys = getAllFieldKeys(npc)
+    const visibleKeys = getVisibleKeys(npc)
 
     return (
-      <div key={npc.id} className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] space-y-3">
-        <div className="flex items-center justify-between">
+      <div key={npc.id} className="p-4 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] space-y-2">
+        <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-bold">{npc.fields.name || '未命名'}</span>
           {showDelete && (
-            <button onClick={() => removeCharacter(npc.id)} className="text-red-400 hover:text-red-300 text-sm">✕ 删除角色</button>
+            <button onClick={() => removeCharacter(npc.id)} className="text-xs text-red-400 hover:text-red-300">✕ 删除角色</button>
           )}
         </div>
 
-        {/* 所有字段按三分类顺序渲染 */}
-        <div className="space-y-1.5">
-          {allKeys.map(k => renderFieldRow(npc, k))}
-        </div>
+        {visibleKeys.map(k => renderFieldRow(npc, k))}
 
-        {/* 两个空添加槽 */}
-        <div className="border-t border-[var(--border)] pt-3 space-y-2">
-          <span className="text-xs text-[var(--text-secondary)]">添加自定义字段</span>
+        {/* 双空添加槽 */}
+        <div className="border-t border-[var(--border)] pt-3 mt-3 space-y-2">
           {([{ slot: slot1, set: setSlot1 }, { slot: slot2, set: setSlot2 }] as const).map((s, i) => (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex items-center gap-1.5">
+              <span className="shrink-0 text-xs w-5 text-center text-green-400">✨</span>
               <input value={s.slot.name} onChange={e => s.set({ ...s.slot, name: e.target.value })}
-                placeholder="字段名称" className="w-20 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-dashed border-[var(--border)] text-xs" />
-              <span className="text-[10px] text-[var(--text-secondary)] shrink-0">✨ 自定义</span>
+                placeholder="字段名称"
+                className={`w-16 shrink-0 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-dashed border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs`} />
               <input value={s.slot.desc} onChange={e => s.set({ ...s.slot, desc: e.target.value })}
-                placeholder="说明或填写示例" className="flex-1 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-dashed border-[var(--border)] text-xs" />
+                placeholder="说明或填写示例"
+                className={`flex-1 px-2 py-1.5 rounded bg-[var(--bg-primary)] border border-dashed border-[var(--border)] focus:border-[var(--accent)] outline-none text-xs`} />
               <button onClick={() => addCustomField(npc.id, s.slot, () => s.set({ name: '', desc: '' }))}
                 disabled={!s.slot.name.trim()}
                 className="shrink-0 px-2 py-1.5 rounded bg-[var(--accent)] text-black text-xs font-medium disabled:opacity-50">
