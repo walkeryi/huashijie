@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useGame } from '@/lib/game-context'
 import { presetWorldCards } from '@/data/world-cards'
 import { listSaves } from '@/lib/storage'
+import { listCustomCards, deleteCustomCard } from '@/lib/custom-cards'
 import { WorldCard, SaveData } from '@/lib/types'
 
 export default function WorldCardSelector() {
@@ -15,19 +16,18 @@ export default function WorldCardSelector() {
   const [selectedCard, setSelectedCard] = useState<WorldCard | null>(null)
   const [playerName, setPlayerName] = useState('')
   const [showLoadPanel, setShowLoadPanel] = useState(false)
-  const [saves, setSaves] = useState<SaveData[]>([])
+  const [customCards, setCustomCards] = useState<WorldCard[]>([])
+  const allCards = [...presetWorldCards, ...customCards]
 
   const nameInputRef = useRef<HTMLInputElement>(null)
 
-  // Load saves when component mounts or when showLoadPanel becomes true
+  // Load saves when showLoadPanel becomes true
   useEffect(() => {
-    if (showLoadPanel) {
-      const loadedSaves = listSaves()
-      setSaves(loadedSaves)
-    }
-  }, [showLoadPanel])
+    if (showLoadPanel) { actions.refreshSaves() }
+  }, [showLoadPanel, actions])
 
   // Focus name input when card is selected
+  useEffect(() => { setCustomCards(listCustomCards()) }, [])
   useEffect(() => {
     if (selectedCard && nameInputRef.current) {
       nameInputRef.current.focus()
@@ -53,7 +53,7 @@ export default function WorldCardSelector() {
   }
 
   const handleLoadSave = (save: SaveData) => {
-    const card = presetWorldCards.find(c => c.id === save.worldCardId)
+    const card = allCards.find(c => c.id === save.worldCardId)
     if (!card) return
     actions.loadGame(save, card)
     router.push('/game')
@@ -72,13 +72,13 @@ export default function WorldCardSelector() {
         <div className="w-full max-w-md">
           <h2 className="text-2xl font-bold mb-6 text-center">📂 继续冒险</h2>
 
-          {saves.length === 0 ? (
+          {saveSlots.length === 0 ? (
             <p className="text-center text-[var(--text-secondary)] mb-6">
               没有找到存档
             </p>
           ) : (
             <div className="space-y-3 mb-6">
-              {saves.map((save) => (
+              {saveSlots.map((save) => (
                 <div key={save.id} className="flex gap-2">
                   <button
                     onClick={() => handleLoadSave(save)}
@@ -147,26 +147,55 @@ export default function WorldCardSelector() {
 
         {/* World Card Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {presetWorldCards.map((card) => {
+          {allCards.map((card) => {
             const isSelected = selectedCard?.id === card.id
+            const isCustom = card.id.startsWith('custom_')
             return (
-              <button
-                key={card.id}
-                onClick={() => handleCardSelect(card)}
-                className={`text-left p-6 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                  isSelected
-                    ? 'border-[var(--accent)] bg-[var(--bg-card)] shadow-lg shadow-[var(--accent)]/10'
-                    : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]'
-                }`}
-              >
-                <div className="text-4xl mb-3">{card.coverEmoji}</div>
-                <h3 className="text-xl font-bold mb-1">{card.name}</h3>
-                <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  {card.subtitle}
-                </p>
-              </button>
+              <div key={card.id} className="relative">
+                <button
+                  onClick={() => handleCardSelect(card)}
+                  className={`w-full text-left p-6 rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                    isSelected
+                      ? 'border-[var(--accent)] bg-[var(--bg-card)] shadow-lg shadow-[var(--accent)]/10'
+                      : 'border-[var(--border)] bg-[var(--bg-card)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]'
+                  }`}
+                >
+                  <div className="text-4xl mb-3">{card.coverEmoji}</div>
+                  <h3 className="text-xl font-bold mb-1">{card.name}</h3>
+                  <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
+                    {card.subtitle}
+                  </p>
+                </button>
+                {isCustom && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (confirm(`删除「${card.name}」？`)) {
+                        deleteCustomCard(card.id)
+                        setCustomCards(listCustomCards())
+                        if (isSelected) setSelectedCard(null)
+                      }
+                    }}
+                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-[var(--bg-primary)] border border-[var(--border)] text-xs text-[var(--text-secondary)] hover:text-red-400 hover:border-red-800"
+                    title="删除"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             )
           })}
+        </div>
+
+        {/* Creator entry */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.push('/creator')}
+            className="w-full p-4 rounded-xl border-2 border-dashed border-[var(--border)] hover:border-[var(--accent)] bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] transition-all text-center cursor-pointer"
+          >
+            <div className="text-2xl mb-1">✨</div>
+            <div className="text-sm text-[var(--text-secondary)]">创建一个新世界</div>
+          </button>
         </div>
 
         {/* Player Name Input - shown when a card is selected */}
