@@ -274,7 +274,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
             </label>
 
             {/* 预设按钮 */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="flex gap-2">
               {PRESETS.map(p => {
                 const active = state.provider === p.provider && state.providerName === p.name
                 return (
@@ -287,16 +287,16 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
                       }
                       dispatch({ type: 'APPLY_PRESET', preset })
                     }}
-                    className={`flex flex-col items-center gap-1.5 p-3 rounded-lg text-xs transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-all ${
                       active
                         ? 'ring-2 ring-[var(--accent)] bg-[var(--bg-card)]'
                         : 'bg-[var(--bg-card)]/50 hover:bg-[var(--bg-card)] border border-[var(--border)]'
                     }`}
                   >
                     {p.modelKey ? (
-                      <ModelIcon model={p.modelKey} size={28} type="color" />
+                      <ModelIcon model={p.modelKey} size={18} type="color" />
                     ) : (
-                      <div className="w-7 h-7 flex items-center justify-center text-lg">⚙️</div>
+                      <div className="w-[18px] h-[18px] flex items-center justify-center text-sm">⚙️</div>
                     )}
                     <span className="text-[var(--text-primary)] text-[11px] leading-tight">{p.name}</span>
                   </button>
