@@ -41,18 +41,13 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
   if (typeof window === 'undefined') return {}
   try {
     const raw = localStorage.getItem(API_CONFIGS_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      console.log('[API存储] 加载新格式:', parsed)
-      return parsed
-    }
+    if (raw) return JSON.parse(raw)
   } catch {}
   // 迁移旧格式 adventure_api_config → adventure_api_configs
   try {
     const old = localStorage.getItem('adventure_api_config')
     if (old) {
       const parsed = JSON.parse(old)
-      console.log('[API存储] 发现旧格式，迁移中:', parsed)
       const configs: Record<string, SavedApiConfig> = {}
       const provider = parsed.provider || 'deepseek'
       configs[provider] = {
@@ -62,11 +57,9 @@ function loadAllApiConfigs(): Record<string, SavedApiConfig> {
       }
       localStorage.setItem(API_CONFIGS_KEY, JSON.stringify(configs))
       localStorage.removeItem('adventure_api_config')
-      console.log('[API存储] 迁移完成:', configs)
       return configs
     }
   } catch {}
-  console.log('[API存储] 无数据')
   return {}
 }
 
@@ -108,7 +101,6 @@ function loadSaveModeConfig(): { saveMode: GameState['saveMode']; accountName: s
 export function createInitialState(): GameState {
   const provider = loadLastProvider()
   const saved = loadApiConfigForProvider(provider)
-  console.log('[初始化] provider:', provider, 'saved:', saved)
   const saveCfg = loadSaveModeConfig()
   return {
     screen: 'menu',
@@ -337,7 +329,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const setProvider = useCallback((provider: 'anthropic' | 'openai' | 'deepseek' | 'custom') => {
     const saved = loadApiConfigForProvider(provider)
-    console.log('[切换供应商] 切换到:', provider, '加载配置:', saved)
     dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
   }, [])
 
@@ -483,7 +474,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
   useEffect(() => {
     if (typeof window === 'undefined') return
-    console.log('[自动保存] provider:', state.provider, 'apiKey:', state.apiKey ? state.apiKey.slice(0,10)+'...' : '(空)', 'model:', state.model)
     const configs = loadAllApiConfigs()
     configs[state.provider] = {
       apiKey: state.apiKey,
@@ -492,7 +482,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
-    console.log('[自动保存] 已保存到 localStorage')
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
 
   const value: GameContextValue = useMemo(() => ({
