@@ -481,32 +481,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSaves])
 
   // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
-  const apiMountedRef = useRef(false)
+  // 从 localStorage 加载初始值（SSR 时 state 为空）
   useEffect(() => {
     if (typeof window === 'undefined') return
-    // 首次渲染跳过（SSR hydration，state 还是空的）
-    if (!apiMountedRef.current) {
-      apiMountedRef.current = true
-      console.log('🔍 S. autoSave: 首次渲染跳过，防止覆盖')
-      // 重新从 localStorage 加载正确数据
-      const provider = loadLastProvider()
-      const saved = loadApiConfigForProvider(provider)
-      if (saved.apiKey) {
-        console.log('🔍 S. autoSave: 从localStorage恢复 apiKey=', saved.apiKey.slice(0,15)+'...')
-        dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
-      }
+    const provider = loadLastProvider()
+    const saved = loadApiConfigForProvider(provider)
+    console.log('🔍 INIT: 从localStorage恢复 provider=', provider, 'apiKey=', saved.apiKey ? saved.apiKey.slice(0,15)+'...' : '(空)')
+    if (saved.apiKey) {
+      dispatch({ type: 'SET_PROVIDER', provider, apiKey: saved.apiKey, model: saved.model, customBaseURL: saved.customBaseURL })
+    }
+  }, []) // 只在挂载时执行一次
+
+  const lastSavedRef = useRef('')
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
+    // 只在值真正变化时保存
+    const current = JSON.stringify({ p: state.provider, k: state.apiKey, m: state.model, u: state.customBaseURL })
+    if (current === lastSavedRef.current) {
+      console.log('🔍 S. autoSave: 值未变，跳过')
       return
     }
-    console.log('🔍 S. autoSave: provider=', state.provider, 'apiKey=', state.apiKey ? state.apiKey.slice(0,15)+'...' : '(空)')
-    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
+    lastSavedRef.current = current
+    console.log('🔍 S. autoSave: 保存 provider=', state.provider, 'apiKey=', state.apiKey ? state.apiKey.slice(0,15)+'...' : '(空)')
     const configs = loadAllApiConfigs()
-    delete configs['undefined']
-    delete configs['null']
-    configs[state.provider] = {
-      apiKey: state.apiKey,
-      model: state.model,
-      customBaseURL: state.customBaseURL,
-    }
+    delete configs['undefined']; delete configs['null']
+    configs[state.provider] = { apiKey: state.apiKey, model: state.model, customBaseURL: state.customBaseURL }
     saveAllApiConfigs(configs)
     saveLastProvider(state.provider)
   }, [state.apiKey, state.provider, state.model, state.customBaseURL])
