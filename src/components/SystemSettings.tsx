@@ -174,7 +174,7 @@ export default function SystemSettings() {
           <div className="px-6 py-6 space-y-3">
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
-              <div className="flex gap-1">
+              <div className="relative">
                 <input type={showKey ? 'text' : 'password'} value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
                   placeholder="sk-..."
                   style={{
@@ -183,15 +183,9 @@ export default function SystemSettings() {
                     background: 'var(--bg-card)',
                     color: 'var(--text-primary)',
                   }}
-                  className="flex-1 px-4 py-2.5 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
+                  className="w-full px-4 py-2.5 pr-10 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
                 <button onClick={() => setShowKey(!showKey)}
-                  style={{
-                    border: 'var(--border-width) var(--border-style) var(--border)',
-                    borderRadius: 'var(--border-radius)',
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-secondary)',
-                  }}
-                  className="px-3 py-2.5 text-sm hover:text-[var(--text-primary)] transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
                   title={showKey ? '隐藏' : '显示'}>
                   {showKey ? '🙈' : '👁'}
                 </button>
