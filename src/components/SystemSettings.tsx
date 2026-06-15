@@ -172,7 +172,7 @@ export default function SystemSettings() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label className="block text-sm text-[var(--text-secondary)] mb-1">提供商</label>
-                <select value={state.provider} onChange={e => {
+                <select value={state.provider} title="选择AI提供商" onChange={e => {
                   const p = e.target.value as 'anthropic' | 'openai' | 'deepseek' | 'custom'
                   actions.setProvider(p)
                 }}

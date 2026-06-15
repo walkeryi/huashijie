@@ -474,7 +474,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // 持久化 API 配置：按供应商分别存储 + 记住当前供应商
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // 防止空/无效 provider
+    if (!state.provider || !['anthropic','openai','deepseek','custom'].includes(state.provider)) return
     const configs = loadAllApiConfigs()
+    // 清理无效键
+    delete configs['undefined']
+    delete configs['null']
     configs[state.provider] = {
       apiKey: state.apiKey,
       model: state.model,
