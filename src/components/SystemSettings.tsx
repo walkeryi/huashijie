@@ -33,6 +33,7 @@ export default function SystemSettings() {
   // 主题 + 字体
   const [currentTheme, setCurrentTheme] = useState(loadTheme())
   const [currentFontSize, setCurrentFontSize] = useState(loadFontSize())
+  const [showKey, setShowKey] = useState(false)
 
   if (!open) {
     return (
@@ -173,15 +174,28 @@ export default function SystemSettings() {
           <div className="px-6 py-6 space-y-3">
             <div>
               <label className="block text-sm text-[var(--text-secondary)] mb-1">API Key</label>
-              <input type="text" value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
-                placeholder="sk-..."
-                style={{
-                  border: 'var(--border-width) var(--border-style) var(--border)',
-                  borderRadius: 'var(--border-radius)',
-                  background: 'var(--bg-card)',
-                  color: 'var(--text-primary)',
-                }}
-                className="w-full px-4 py-2.5 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
+              <div className="flex gap-1">
+                <input type={showKey ? 'text' : 'password'} value={state.apiKey} onChange={e => actions.setApiKey(e.target.value)}
+                  placeholder="sk-..."
+                  style={{
+                    border: 'var(--border-width) var(--border-style) var(--border)',
+                    borderRadius: 'var(--border-radius)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-primary)',
+                  }}
+                  className="flex-1 px-4 py-2.5 outline-none text-sm font-mono placeholder:text-[var(--text-secondary)]" />
+                <button onClick={() => setShowKey(!showKey)}
+                  style={{
+                    border: 'var(--border-width) var(--border-style) var(--border)',
+                    borderRadius: 'var(--border-radius)',
+                    background: 'var(--bg-card)',
+                    color: 'var(--text-secondary)',
+                  }}
+                  className="px-3 py-2.5 text-sm hover:text-[var(--text-primary)] transition-colors"
+                  title={showKey ? '隐藏' : '显示'}>
+                  {showKey ? '🙈' : '👁'}
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-2">
