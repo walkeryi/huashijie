@@ -17,7 +17,7 @@ export function createModelInstance(opts: {
     return createAnthropic({ apiKey })(model || 'claude-sonnet-4-6')
   }
   if (provider === 'deepseek') {
-    return createOpenAICompatible({ name: 'deepseek', apiKey, baseURL: 'https://api.deepseek.com/v1' })(model || 'deepseek-chat')
+    return createOpenAICompatible({ name: 'deepseek', apiKey, baseURL: 'https://api.deepseek.com/v1' })(model || 'deepseek-v4-pro')
   }
   if (provider === 'openai') {
     return createOpenAI({ apiKey })(model || 'gpt-4o')

@@ -115,31 +115,32 @@ export default function GameScreen() {
       let fullNarration = ''
       let toolCallOccurred = false
       let chunkCount = 0
-      let otherEventCount = 0
+      const eventCounts: Record<string, number> = {}
 
       for await (const part of reader) {
+        const t = part.type as string
+        eventCounts[t] = (eventCounts[t] || 0) + 1
+
         if (part.type === 'text-delta') {
           chunkCount++
           fullNarration += part.delta as string
           sharedEventBus.append(part.delta as string)
         }
-        else if (part.type === 'tool-input-available' && part.toolName === 'update_state') {
+        else if (part.type === 'tool-input-available') {
           toolCallOccurred = true
-          console.log('[GameScreen] 收到 tool-input-available (update_state), options 数:', (part.input as any)?.options?.length ?? 0)
-          actions.updateState({
-            ...(part.input as Record<string, unknown>),
-            attributeDefs: state.worldCard?.attributes ?? [],
-          })
-        }
-        else if (part.type && part.type !== 'text-delta') {
-          otherEventCount++
-          if (otherEventCount <= 5) {
-            console.log('[GameScreen] SSE 其他事件:', part.type)
+          console.log('[GameScreen] 🔧 tool-input-available | toolName:', (part as any).toolName, '| 字段:', Object.keys((part.input as any) || {}).join(', '))
+          if ((part as any).toolName === 'update_state') {
+            const input = part.input as Record<string, unknown>
+            console.log('[GameScreen] ✅ update_state | options:', (input?.options as any)?.length, '| attrChanges:', Object.keys(input?.attributeChanges as object || {}), '| affChanges:', Object.keys(input?.npcAffinityChanges as object || {}))
+            actions.updateState({
+              ...input,
+              attributeDefs: state.worldCard?.attributes ?? [],
+            })
           }
         }
       }
 
-      console.log('[GameScreen] SSE 流结束 | 文本块数:', chunkCount, '| 旁白长度:', fullNarration.length, '| toolCall:', toolCallOccurred, '| 其他事件:', otherEventCount, '条')
+      console.log('[GameScreen] SSE 流结束 | 文本块数:', chunkCount, '| 旁白长度:', fullNarration.length, '| toolCall:', toolCallOccurred, '| 事件:', JSON.stringify(eventCounts))
 
       // 降级兜底: 模型没调用 Tool
       if (!toolCallOccurred) {

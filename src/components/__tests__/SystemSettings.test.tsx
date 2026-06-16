@@ -52,7 +52,7 @@ function setupState(overrides?: Partial<any>) {
     apiKey: 'sk-test-key-12345',
     provider: 'deepseek',
     providerName: 'DeepSeek',
-    model: 'deepseek-chat',
+    model: 'deepseek-v4-flash',
     customBaseURL: '',
     apiBaseURL: 'https://api.deepseek.com',
     protocol: 'openai',

@@ -128,8 +128,7 @@ ${beatProgress}
 - 如本回合有属性或好感度变化，必须填入 attributeChanges 和 npcAffinityChanges
 - 调用后立即停止，不追加任何文本
 
-[模型适配] 当前提示词针对 DeepSeek Chat 验证通过（3轮 100% 调用率）。
-切换至 GPT-4 或 Claude 时，需重新验证工具调用率，可能需要 toolChoice: 'required' 参数。`
+[模型适配] 工具调用已在 DeepSeek V4 Flash / Pro 双模型验证通过。`
 }
 
 function buildMessages(
@@ -144,6 +143,11 @@ function buildMessages(
     } else if (entry.role === 'player') {
       messages.push({ role: 'user', content: `[玩家选择]: ${entry.content}` })
     }
+  }
+
+  // 最后一条用户消息后追加工具调用提醒（DeepSeek 需要明确指令）
+  if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+    messages[messages.length - 1].content += '\n\n（请先写叙述，然后必须调用 update_state 工具。）'
   }
 
   if (messages.length === 0) {
@@ -197,6 +201,12 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       return new Response(JSON.stringify({ error: '缺少 API Key：请在页面输入或设置环境变量' }), { status: 400 })
     }
+    // 清理非标准参数，避免干扰 DeepSeek 工具调用
+    const cleanParams: Record<string, any> = {}
+    if (advancedParams?.temperature !== undefined) cleanParams.temperature = advancedParams.temperature
+    if (advancedParams?.max_tokens !== undefined) cleanParams.max_tokens = advancedParams.max_tokens
+    if (advancedParams?.top_p !== undefined) cleanParams.top_p = advancedParams.top_p
+
     const systemPrompt = buildSystemPrompt(worldCard, playerState, npcAffinities ?? {}, npcRuntime ?? {})
     const messages = buildMessages(dialogueHistory, worldCard)
 
@@ -221,9 +231,9 @@ export async function POST(request: NextRequest) {
         }),
       },
       stopWhen: stepCountIs(2),
-      ...(advancedParams?.temperature !== undefined && { temperature: advancedParams.temperature }),
-      ...(advancedParams?.max_tokens !== undefined && { maxTokens: advancedParams.max_tokens }),
-      ...(advancedParams?.top_p !== undefined && { topP: advancedParams.top_p }),
+      ...(cleanParams.temperature !== undefined && { temperature: cleanParams.temperature }),
+      ...(cleanParams.max_tokens !== undefined && { maxTokens: cleanParams.max_tokens }),
+      ...(cleanParams.top_p !== undefined && { topP: cleanParams.top_p }),
     })
 
     console.log('[adventure] streamText 已创建，返回流响应, 总耗时:', Date.now() - start, 'ms')

@@ -76,7 +76,7 @@ export function useGame() {
         const preset = action.preset
         const defaultAdv: AdvancedParams = preset.protocol === 'anthropic'
           ? { max_tokens: 4096, temperature: 0.7, top_p: 1, top_k: 40 }
-          : { thinking: 'enabled', reasoning_effort: 'high', stream: false, temperature: 0.7, max_tokens: 4096, top_p: 1 }
+          : { temperature: 0.7, max_tokens: 4096, top_p: 1 }
         console.log('[dispatch] APPLY_PRESET:', preset.id, 'apiKey传入:', (action.apiKey || '(空)').slice(0, 20))
         appConfig.setAll({
           provider: preset.provider,

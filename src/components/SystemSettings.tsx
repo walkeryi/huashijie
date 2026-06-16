@@ -52,7 +52,7 @@ interface PresetDef {
 const PRESETS: PresetDef[] = [
   { id: 'openai', name: 'OpenAI', provider: 'openai', apiBaseURL: 'https://api.openai.com/v1', defaultModel: 'gpt-4o', protocol: 'openai', modelKey: 'gpt-4o' },
   { id: 'anthropic', name: 'Anthropic', provider: 'anthropic', apiBaseURL: 'https://api.anthropic.com', defaultModel: 'claude-sonnet-4-6', protocol: 'anthropic', modelKey: 'claude-sonnet-4-6' },
-  { id: 'deepseek', name: 'DeepSeek', provider: 'deepseek', apiBaseURL: 'https://api.deepseek.com', defaultModel: 'deepseek-chat', protocol: 'openai', modelKey: 'deepseek-chat' },
+  { id: 'deepseek', name: 'DeepSeek', provider: 'deepseek', apiBaseURL: 'https://api.deepseek.com', defaultModel: 'deepseek-v4-pro', protocol: 'openai', modelKey: 'deepseek-v4-pro' },
   { id: 'custom', name: '自定义', provider: 'custom', apiBaseURL: '', defaultModel: '', protocol: 'openai', modelKey: '' },
 ]
 
