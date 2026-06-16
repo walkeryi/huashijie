@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useGame, loadApiConfigForProvider } from '@/lib/game-context'
-import { themes, loadTheme, saveTheme, applyTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
+import { themes, loadTheme, saveTheme, setTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 import { ModelIcon } from '@lobehub/icons'
 import type { Protocol, PresetProvider } from '@/lib/types'
 
@@ -210,7 +210,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
     if (!theme) return
     setCurrentTheme(id)
     saveTheme(id)
-    applyTheme(theme)
+    setTheme(theme.id)
   }
 
   const handleFontSizeChange = (size: FontSize) => {

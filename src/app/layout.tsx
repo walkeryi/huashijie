@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import './globals.css'
 import { GameProvider } from '@/lib/game-context'
 import GlobalButtons from '@/components/GlobalButtons'
-import ThemeProvider from '@/components/ThemeProvider'
+import { getThemeCookie } from '@/lib/theme'
 
 export const metadata: Metadata = {
   title: '话世界',
@@ -14,15 +15,15 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const themeId = getThemeCookie(cookies().toString())
+
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" data-theme={themeId} suppressHydrationWarning>
       <body className="min-h-screen">
-        <ThemeProvider>
-          <GameProvider>
-            {children}
-            <GlobalButtons />
-          </GameProvider>
-        </ThemeProvider>
+        <GameProvider>
+          {children}
+          <GlobalButtons />
+        </GameProvider>
       </body>
     </html>
   )

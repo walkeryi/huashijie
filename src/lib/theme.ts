@@ -143,11 +143,19 @@ export function saveFontSize(size: FontSize): void {
   localStorage.setItem(FONT_KEY, size)
 }
 
+export function setTheme(themeId: string): void {
+  document.documentElement.setAttribute('data-theme', themeId)
+  localStorage.setItem(THEME_KEY, themeId)
+  document.cookie = `theme=${themeId}; path=/; max-age=31536000; SameSite=Lax`
+}
+
+export function getThemeCookie(cookieHeader: string): string {
+  const match = cookieHeader.match(/(?:^|;\s*)theme=([^;]*)/)
+  return match?.[1] || 'gold'
+}
+
 export function applyTheme(theme: Theme): void {
-  const root = document.documentElement
-  Object.entries(theme.vars).forEach(([key, value]) => {
-    root.style.setProperty(key, value)
-  })
+  setTheme(theme.id)
 }
 
 export function applyFontSize(size: FontSize): void {
