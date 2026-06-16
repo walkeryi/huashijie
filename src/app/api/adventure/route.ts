@@ -1,16 +1,9 @@
 // src/app/api/adventure/route.ts
 import { NextRequest } from 'next/server'
 import { streamText, tool, zodSchema, stepCountIs } from 'ai'
-import { anthropic } from '@ai-sdk/anthropic'
-import { openai, createOpenAI } from '@ai-sdk/openai'
 import { WorldCard, PlayerState, DialogueEntry } from '@/lib/types'
 import { updateStateSchema } from '@/lib/tool-schema'
-
-function getApiKey(apiKeyOverride?: string): string {
-  const key = apiKeyOverride || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY
-  if (!key) throw new Error('缺少 API Key：请在页面输入或设置环境变量')
-  return key
-}
+import { createModelInstance, resolveApiKey } from '@/lib/create-model-instance'
 
 function sanitizePlayerName(name: string): string {
   return name.replace(/[\n\r\\]/g, '').slice(0, 50)
@@ -138,6 +131,9 @@ function buildMessages(
 }
 
 export async function POST(request: NextRequest) {
+  const start = Date.now()
+  console.log('[adventure] POST 请求到达')
+
   try {
     const body = await request.json()
     const {
@@ -156,19 +152,33 @@ export async function POST(request: NextRequest) {
       advancedParams?: Record<string, any>
     }
 
+    console.log('[adventure] 解析参数:', {
+      provider,
+      model,
+      customBaseURL: customBaseURL || '(无)',
+      apiKeyLen: requestApiKey?.length ?? 0,
+      apiKeyPrefix: requestApiKey?.slice(0, 10) ?? '(空)',
+      worldCardId: worldCard?.id ?? '(空)',
+      dialogueHistoryLen: dialogueHistory?.length ?? 0,
+    })
+
     if (!worldCard || !playerState || !dialogueHistory) {
+      console.log('[adventure] ❌ 请求体不完整')
       return new Response(JSON.stringify({ error: '请求体不完整' }), { status: 400 })
     }
 
-    const apiKey = getApiKey(requestApiKey)
+    const apiKey = resolveApiKey(provider, requestApiKey)
+    if (!apiKey) {
+      return new Response(JSON.stringify({ error: '缺少 API Key：请在页面输入或设置环境变量' }), { status: 400 })
+    }
     const systemPrompt = buildSystemPrompt(worldCard, playerState, npcAffinities ?? {}, npcRuntime ?? {})
     const messages = buildMessages(dialogueHistory, worldCard)
 
-    const modelInstance = provider === 'anthropic'
-      ? anthropic(model || 'claude-sonnet-4-6')
-      : customBaseURL
-        ? createOpenAI({ baseURL: customBaseURL })(model || 'gpt-4o')
-        : openai(model || 'gpt-4o')
+    console.log('[adventure] 构建消息数:', messages.length, 'systemPrompt 长度:', systemPrompt.length)
+
+    const modelInstance = createModelInstance({ provider, apiKey, model, customBaseURL })
+
+    console.log('[adventure] 模型实例已创建，调用 streamText...')
 
     const result = streamText({
       model: modelInstance,
@@ -186,10 +196,14 @@ export async function POST(request: NextRequest) {
       ...(advancedParams?.top_p !== undefined && { topP: advancedParams.top_p }),
     })
 
+    console.log('[adventure] streamText 已创建，返回流响应, 总耗时:', Date.now() - start, 'ms')
     return result.toUIMessageStreamResponse()
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
-    console.error('API Error:', message)
+    const stack = error instanceof Error ? error.stack : undefined
+    const latency = Date.now() - start
+    console.error('[adventure] ❌ 失败 (耗时', latency, 'ms):', message)
+    if (stack) console.error('[adventure] 堆栈:', stack)
     return new Response(JSON.stringify({ error: '内部服务器错误' }), { status: 500 })
   }
 }
