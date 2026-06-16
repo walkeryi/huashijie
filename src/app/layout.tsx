@@ -10,12 +10,13 @@ export const metadata: Metadata = {
   description: '用对话创造世界 — AI 驱动的文字冒险引擎',
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const themeId = getThemeCookie(cookies().toString())
+  const cookieStore = await cookies()
+  const themeId = getThemeCookie(cookieStore.toString())
 
   return (
     <html lang="zh-CN" data-theme={themeId} suppressHydrationWarning>
