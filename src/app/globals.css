@@ -175,3 +175,10 @@ button:where(:not([class*="no-theme"])) {
 .settings-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
