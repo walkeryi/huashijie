@@ -155,6 +155,59 @@ const handleApiKeyAnimationStart: React.AnimationEventHandler<HTMLInputElement> 
 - 浏览器自动填入的密码管理数据不会写进 state
 - CSS 类名 `huashijie-apikey` 配合 `huashijie-autofill-detected` / `huashijie-autofill-cleared` 动画实现检测
 
+## Bug 记录：DeepSeek 工具调用失败（已修复）
+
+### 症状
+
+新游戏第一轮正常（`toolCall: true`），第二轮起 AI 仅生成叙述文本不调用 `update_state` 工具（`toolCall: false`）。属性变化和 NPC 好感度完全停滞。
+
+### 排查过程
+
+| 尝试 | 方法 | 结果 |
+|------|------|------|
+| 1 | 重写系统提示词（数值约束表、强制工具调用规则） | 局部改善，不够稳定 |
+| 2 | 工具描述标注"每次必须调用" | 无明显影响 |
+| 3 | `toolChoice: 'required'` 强制调用 | DeepSeek 跳过叙述直接调工具，文本为 0 字 |
+| 4 | 删除提示词中"Flash 不支持工具调用"（自证预言） | 必要但不够 |
+| 5 | 过滤 `advancedParams` 中 `thinking`/`reasoning_effort` 非标准参数 | 无影响 |
+| 6 | 换模型 `deepseek-v4-pro` | 都能调，排除模型差异 |
+| 7 | curl 用完整蒸汽苍穹世界卡 + 29 条对话 + thinking 参数测试 | 稳定调用，排除载荷大小 |
+| 8 | **新开游戏** | 第一轮成功，第二轮起失败 — 定位到 `buildMessages` |
+
+### 根因
+
+`buildMessages` 函数中，新游戏第一轮注入初始消息时附带明确的工具调用指令：
+
+```
+[游戏开始]
+初始场景：...
+请根据以上场景开始叙述，并调用 update_state 工具。
+```
+
+但后续轮次只输出 `[玩家选择]: xxx`，没有工具调用提醒。DeepSeek 模型需要每条用户消息都包含明确指令才能稳定调用工具。
+
+### 修复
+
+**文件**: `src/app/api/adventure/route.ts` — `buildMessages` 函数
+
+在处理完常规消息后，向最后一条用户消息追加工具调用提醒：
+
+```ts
+if (messages.length > 0 && messages[messages.length - 1].role === 'user') {
+  messages[messages.length - 1].content += '\n\n（请先写叙述，然后必须调用 update_state 工具。）'
+}
+```
+
+同时进行的配套修复：
+- 模型适配注释从"Flash 不支持工具调用"改为"双模型验证通过"
+- 默认模型名 `deepseek-chat` → `deepseek-v4-pro`（DeepSeek 官方已更名）
+- 默认 `advancedParams` 移除 `thinking`/`reasoning_effort`（非标准参数，避免干扰）
+- 服务端显式过滤 `advancedParams`，仅传递 `temperature`/`max_tokens`/`top_p`
+
+### 验证结果
+
+新游戏连续交互 11+ 轮，工具调用率 100%，属性变化和好感度变化正常。
+
 ## 相关文档
 → state-management.md：AppConfigContext 管理 provider/model/apiKey 状态
 → save-system.md：apiKey 在存档中的处理策略（上传时置空）
