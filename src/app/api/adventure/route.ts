@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
       ...(advancedParams?.top_p !== undefined && { topP: advancedParams.top_p }),
     })
 
-    return result.toTextStreamResponse()
+    return result.toDataStreamResponse()
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('API Error:', message)
