@@ -118,3 +118,15 @@ export async function migrateLocalToOnline(): Promise<{ success: boolean; count:
     return { success: false, count: 0 }
   }
 }
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+export async function debouncedAutoSave(data: SaveData): Promise<void> {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  return new Promise((resolve) => {
+    debounceTimer = setTimeout(async () => {
+      await autoSave(data)
+      resolve()
+    }, 2000)
+  })
+}

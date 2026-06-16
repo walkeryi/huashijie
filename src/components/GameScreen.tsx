@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { readDataStream } from 'ai'
 import { useGame } from '@/lib/game-context'
 import { createEventBus } from '@/lib/event-bus'
+import { debouncedAutoSave } from '@/lib/save-service'
 import DialogueBox from './DialogueBox'
 import OptionsPanel from './OptionsPanel'
 import StatusPanel from './StatusPanel'
@@ -13,6 +15,7 @@ const eventBus = createEventBus()
 
 export default function GameScreen() {
   const { state, actions } = useGame()
+  const router = useRouter()
   const hasTriggeredRef = useRef(false)
   const abortRef = useRef<AbortController>()
 
@@ -114,6 +117,18 @@ export default function GameScreen() {
       const newHistory = [...state.dialogueHistory, playerEntry, narratorEntry]
       actions.archiveDialogue(newHistory)
 
+      // 后台自动存档（2s 防抖）
+      const saveData = {
+        id: 'autosave',
+        slotName: '自动存档',
+        timestamp: Date.now(),
+        worldCardId: state.worldCard!.id,
+        playerState: state.playerState!,
+        dialogueHistory: newHistory,
+        apiKey: state.apiKey,
+      }
+      debouncedAutoSave(saveData).catch(() => {})
+
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') return
       const message = e instanceof Error ? e.message : String(e)
@@ -125,6 +140,13 @@ export default function GameScreen() {
   useEffect(() => {
     return () => { abortRef.current?.abort() }
   }, [])
+
+  // 如果不在游戏中则重定向到首页（从 game/page.tsx 移入，适配 RSC）
+  useEffect(() => {
+    if (state.screen === 'menu') {
+      router.replace('/')
+    }
+  }, [state.screen, router])
 
   // 新游戏首次触发 AI 开场
   useEffect(() => {

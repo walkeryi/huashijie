@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useOptimistic } from 'react'
 import { useGame } from '@/lib/game-context'
 import * as saveService from '@/lib/save-service'
 import NPCPanel from './NPCPanel'
@@ -19,6 +19,13 @@ export default function StatusPanel() {
   const [showInv, setShowInv] = useState(false)
   const [showFlag, setShowFlag] = useState(false)
   const [slotInfos, setSlotInfos] = useState<Record<number, { slotName: string; timestamp: number } | null>>({})
+  const [optimisticSlotInfos, addOptimisticSlotInfo] = useOptimistic(
+    slotInfos,
+    (state, newInfo: { slot: number; slotName: string; timestamp: number }) => ({
+      ...state,
+      [newInfo.slot]: { slotName: newInfo.slotName, timestamp: newInfo.timestamp },
+    })
+  )
   const [loadingSlots, setLoadingSlots] = useState(false)
 
   // Focus save name input when active
@@ -56,6 +63,8 @@ export default function StatusPanel() {
   const handleSaveConfirm = async () => {
     if (activeSaveSlot === null) return
     const name = saveNameInput.trim() || `存档 ${activeSaveSlot}`
+    // 乐观更新 — UI 瞬间响应
+    addOptimisticSlotInfo({ slot: activeSaveSlot, slotName: name, timestamp: Date.now() })
     await actions.saveGame(activeSaveSlot, name)
     setActiveSaveSlot(null)
     setSaveNameInput('')
@@ -135,7 +144,7 @@ export default function StatusPanel() {
           <div className="mt-3 space-y-2 animate-fadeIn">
             {loadingSlots && <p className="text-xs text-[var(--text-secondary)]">加载中...</p>}
             {[1, 2, 3].map((slot) => {
-              const slotInfo = slotInfos[slot]
+              const slotInfo = optimisticSlotInfos[slot]
               const isActive = activeSaveSlot === slot
 
               return (
