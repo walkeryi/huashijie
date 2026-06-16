@@ -73,8 +73,12 @@ function checkOption(option: GameOption, state: GameState): boolean {
   return true
 }
 
-export default function OptionsPanel() {
-  const { state, actions } = useGame()
+interface OptionsPanelProps {
+  onSubmit?: (text: string) => void
+}
+
+export default function OptionsPanel({ onSubmit }: OptionsPanelProps) {
+  const { state } = useGame()
   const { currentOptions, isLoading, playerState } = state
 
   const [freeInput, setFreeInput] = useState('')
@@ -102,14 +106,14 @@ export default function OptionsPanel() {
   }, [visible])
 
   const handleOptionClick = (option: GameOption) => {
-    actions.submitAction(option.text)
+    onSubmit?.(option.text)
     setFreeInput('')
   }
 
   const handleFreeSubmit = () => {
     const text = freeInput.trim()
     if (!text) return
-    actions.submitAction(text)
+    onSubmit?.(text)
     setFreeInput('')
   }
 
