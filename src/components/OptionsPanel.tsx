@@ -133,7 +133,7 @@ export default function OptionsPanel({ onSubmit }: OptionsPanelProps) {
       {/* Options - only show when visible (after delay) */}
       {visible && currentOptions.length > 0 && (
         <div className="animate-fadeIn space-y-2">
-          {currentOptions.map((option, index) => {
+          {currentOptions.map((option: GameOption, index: number) => {
             const meetsConditions = checkOption(option, state)
 
             return (

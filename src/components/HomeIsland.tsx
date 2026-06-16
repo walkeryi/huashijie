@@ -142,7 +142,7 @@ export default function HomeIsland() {
             <p className="text-center text-[var(--text-secondary)] mb-6">没有找到存档</p>
           ) : (
             <div className="space-y-3 mb-6">
-              {saveSlots.map((save, i) => (
+              {saveSlots.map((save: SaveData, i: number) => (
                 <div key={save.id || `save-${i}`} className="flex gap-2">
                   <button
                     onClick={() => handleLoadSave(save)}

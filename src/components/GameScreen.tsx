@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { readDataStream } from 'ai'
+// 本地 SSE 解析器 — AI SDK v6 不再导出 readDataStream
 import { useGame } from '@/lib/game-context'
 import { createEventBus } from '@/lib/event-bus'
 import { debouncedAutoSave } from '@/lib/save-service'
@@ -13,11 +13,39 @@ import StatusPanel from './StatusPanel'
 // 模块级 EventBus 单例 — 与 DialogueBox 共享
 const eventBus = createEventBus()
 
+// 本地 SSE 解析器 — 解析 AI SDK v6 UIMessageStream 格式
+async function* readDataStream(
+  body: ReadableStream<Uint8Array>,
+  { signal }: { signal?: AbortController['signal'] } = {},
+): AsyncGenerator<{ type: string; [key: string]: unknown }> {
+  const decoder = new TextDecoder()
+  const reader = body.getReader()
+  let buffer = ''
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n')
+      buffer = parts.pop() || ''
+      for (const line of parts) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6).trim()
+          if (data === '[DONE]') return
+          try { yield JSON.parse(data) } catch { /* 跳过无效 JSON */ }
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 export default function GameScreen() {
   const { state, actions } = useGame()
   const router = useRouter()
   const hasTriggeredRef = useRef(false)
-  const abortRef = useRef<AbortController>()
+  const abortRef = useRef<AbortController | null>(null)
 
   // 核心交互 — readDataStream 消费 SSE 流
   const submitAction = useCallback(async (optionText: string) => {
@@ -74,12 +102,12 @@ export default function GameScreen() {
 
       for await (const part of reader) {
         if (part.type === 'text-delta') {
-          fullNarration += part.textDelta
-          eventBus.append(part.textDelta)
+          fullNarration += part.delta as string
+          eventBus.append(part.delta as string)
         }
-        else if (part.type === 'tool-call' && part.toolName === 'update_state') {
+        else if (part.type === 'tool-input-available' && part.toolName === 'update_state') {
           toolCallOccurred = true
-          actions.updateState(part.args)
+          actions.updateState(part.input as Record<string, unknown>)
         }
       }
 

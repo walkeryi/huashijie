@@ -73,7 +73,7 @@ describe('SystemSettings', () => {
     fireEvent.click(screen.getByText('⚙️'))
     fireEvent.click(screen.getByText('🔑 API'))
 
-    const apiKeyInput = screen.getByPlaceholderText('sk-...') as HTMLInputElement
+    const apiKeyInput = screen.getByPlaceholderText('请先选择预设供应商，再输入密钥') as HTMLInputElement
     expect(apiKeyInput.type).toBe('text')
   })
 
@@ -83,7 +83,7 @@ describe('SystemSettings', () => {
     fireEvent.click(screen.getByText('⚙️'))
     fireEvent.click(screen.getByText('🔑 API'))
 
-    const apiKeyInput = screen.getByPlaceholderText('sk-...') as HTMLInputElement
+    const apiKeyInput = screen.getByPlaceholderText('请先选择预设供应商，再输入密钥') as HTMLInputElement
     expect(apiKeyInput.className).toContain('huashijie-apikey')
   })
 
@@ -107,7 +107,7 @@ describe('SystemSettings', () => {
     fireEvent.click(screen.getByText('⚙️'))
     fireEvent.click(screen.getByText('🔑 API'))
 
-    const apiKeyInput = screen.getByPlaceholderText('sk-...') as HTMLInputElement
+    const apiKeyInput = screen.getByPlaceholderText('请先选择预设供应商，再输入密钥') as HTMLInputElement
 
     // 验证 onAnimationStart 已绑定（React 将它转换为 animationstart 事件监听）
     // 实际触发依赖真实浏览器的 CSS :-webkit-autofill 动画
@@ -120,7 +120,7 @@ describe('SystemSettings', () => {
     fireEvent.click(screen.getByText('⚙️'))
     fireEvent.click(screen.getByText('🔑 API'))
 
-    const apiKeyInput = screen.getByPlaceholderText('sk-...') as HTMLInputElement
+    const apiKeyInput = screen.getByPlaceholderText('请先选择预设供应商，再输入密钥') as HTMLInputElement
 
     fireEvent.change(apiKeyInput, { target: { value: 'sk-manual-input' } })
     expect(mockSetApiKey).toHaveBeenCalledWith('sk-manual-input')

@@ -78,7 +78,7 @@ export default function WorldCardSelector() {
             </p>
           ) : (
             <div className="space-y-3 mb-6">
-              {saveSlots.map((save) => (
+              {saveSlots.map((save: SaveData) => (
                 <div key={save.id} className="flex gap-2">
                   <button
                     onClick={() => handleLoadSave(save)}

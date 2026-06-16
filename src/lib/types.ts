@@ -209,23 +209,5 @@ export interface SaveMeta {
   playerName: string
 }
 
-export type GameAction =
-  | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
-  | { type: 'SET_API_KEY'; apiKey: string }
-  | { type: 'SET_PROVIDER'; provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'; apiKey?: string; model?: string; customBaseURL?: string; protocol?: Protocol; providerName?: string; apiBaseURL?: string; advancedParams?: AdvancedParams }
-  | { type: 'SET_MODEL'; model: string }
-  | { type: 'SET_CUSTOM_BASE_URL'; baseURL: string }
-  | { type: 'SET_PROTOCOL'; protocol: Protocol }
-  | { type: 'SET_PROVIDER_NAME'; name: string }
-  | { type: 'SET_API_BASE_URL'; url: string }
-  | { type: 'SET_ADVANCED_PARAMS'; params: Partial<AdvancedParams> }
-  | { type: 'APPLY_PRESET'; preset: PresetProvider; apiKey?: string; model?: string; customBaseURL?: string; protocol?: Protocol; providerName?: string; apiBaseURL?: string; advancedParams?: AdvancedParams }
-  | { type: 'SET_LOADING'; isLoading: boolean }
-  | { type: 'SET_RESPONSE'; response: AIResponse; playerEntry: DialogueEntry }
-  | { type: 'SET_ERROR'; error: string }
-  | { type: 'APPEND_NARRATION'; text: string }
-  | { type: 'LOAD_SAVE'; save: SaveData; worldCard: WorldCard }
-  | { type: 'REFRESH_SAVES'; saves: SaveData[] }
-  | { type: 'RETURN_TO_MENU' }
-  | { type: 'INIT_NPC_AFFINITIES'; affinities: Record<string, number> }
-  | { type: 'SET_SAVE_MODE'; mode: SaveMode; accountName: string }
+// 注意：GameAction 类型已移除 — 各 Context 使用独立的 setter/reducer 模式
+// PlayerStateContext 定义局部 PlayerStateAction，AppConfig/GamePlay 使用 useState setter

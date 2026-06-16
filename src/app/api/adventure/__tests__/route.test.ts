@@ -60,41 +60,35 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('🧠 智慧: 3/10')
   })
 
-  it('includes JSON output format instructions', () => {
+  it('includes tool-call output instructions', () => {
     const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
-    expect(prompt).toContain('"narration"')
-    expect(prompt).toContain('"options"')
-    expect(prompt).toContain('"attributeChanges"')
-    expect(prompt).toContain('"attributeChecks"')
+    expect(prompt).toContain('update_state')
+    expect(prompt).toContain('选项')
+    expect(prompt).toContain('属性变化')
   })
 
-  it('includes new JSON fields in output format', () => {
-    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
+  it('includes NPC affinity, items, and flags in player state section', () => {
+    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), { blacksmith: 45 })
 
-    expect(prompt).toContain('"npcAffinityChanges"')
-    expect(prompt).toContain('"newFlags"')
-    expect(prompt).toContain('"lostFlags"')
-    expect(prompt).toContain('"itemsGained"')
-    expect(prompt).toContain('"itemsLost"')
+    expect(prompt).toContain('好感')
+    expect(prompt).toContain('物品栏')
+    expect(prompt).toContain('旗标')
   })
 
   it('includes narrative rules in Chinese', () => {
     const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
     expect(prompt).toContain('文字冒险游戏的叙事引擎')
-    expect(prompt).toContain('200-400 字')
-    expect(prompt).toContain('2-4 个有意义的选择')
+    expect(prompt).toContain('200-400字')
+    expect(prompt).toContain('工具')
   })
 
-  it('includes new rules about NPC affinity, items, and flags', () => {
+  it('includes NPC behavior rules', () => {
     const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
-    expect(prompt).toContain('NPC 好感度随玩家行为变化')
     expect(prompt).toContain('好感度高的 NPC 主动提供帮助')
-    expect(prompt).toContain('物品在合理时消耗')
-    expect(prompt).toContain('旗标代表不可逆的世界变化')
-    expect(prompt).toContain('npcAffinityChanges 只包含本次对话中有变化的 NPC')
+    expect(prompt).toContain('NPC 对话约束')
   })
 
   it('sanitizes player name to prevent prompt injection', () => {

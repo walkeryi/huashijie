@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useOptimistic } from 'react'
 import { useGame } from '@/lib/game-context'
 import * as saveService from '@/lib/save-service'
+import type { AttributeDef } from '@/lib/types'
 import NPCPanel from './NPCPanel'
 import InventoryPanel from './InventoryPanel'
 import FlagPanel from './FlagPanel'
@@ -98,7 +99,7 @@ export default function StatusPanel() {
 
       {/* Attributes */}
       <div className="space-y-3">
-        {worldAttributes.map((attr) => {
+        {worldAttributes.map((attr: AttributeDef) => {
           const currentValue = playerAttrs[attr.key] ?? attr.initial
           const maxValue = attr.max
           const percentage = Math.max(0, Math.min(100, (currentValue / maxValue) * 100))

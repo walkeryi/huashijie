@@ -4,6 +4,7 @@ import { useRef, useEffect, useCallback } from 'react'
 import { useGame } from '@/lib/game-context'
 import { createEventBus } from '@/lib/event-bus'
 import { ModelIcon } from '@lobehub/icons'
+import type { DialogueEntry } from '@/lib/types'
 
 // 模块级 EventBus 单例 — 同一时刻只有一个流
 const eventBus = createEventBus()
@@ -77,7 +78,7 @@ export default function DialogueBox() {
       style={{ maxHeight: 'calc(100vh - 280px)' }}
     >
       {/* Dialogue History */}
-      {dialogueHistory.map((entry) => {
+      {dialogueHistory.map((entry: DialogueEntry) => {
         const isPlayer = entry.role === 'player'
         return (
           <div
