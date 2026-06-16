@@ -1,0 +1,13 @@
+# 强制 LF 换行，消除 Windows/Linux 差异
+* text=auto
+
+# 以下文件无论什么平台都统一用 LF
+package-lock.json text eol=lf
+package.json text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.md text eol=lf

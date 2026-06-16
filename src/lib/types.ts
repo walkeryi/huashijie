@@ -131,17 +131,6 @@ export interface GameOption {
   itemNot?: string[]                         // ["poison_vial"]
 }
 
-export interface AIResponse {
-  narration: string
-  options: GameOption[]
-  attributeChanges: Record<string, number>   // 例如 {courage: 2, health: -1}
-  npcAffinityChanges: Record<string, number>
-  newFlags: string[]
-  lostFlags: string[]
-  itemsGained: string[]
-  itemsLost: string[]
-}
-
 export interface PlayerState {
   playerName: string
   attributes: Record<string, number>  // 例如 {courage: 5, health: 8}

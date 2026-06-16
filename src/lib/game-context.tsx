@@ -3,19 +3,21 @@
 
 'use client'
 
-import React, { type ReactNode, useCallback } from 'react'
+import React, { type ReactNode, useCallback, useState, useMemo } from 'react'
 import { AppConfigProvider, useAppConfig, loadApiConfigForProvider } from './app-config-context'
 import { PlayerStateProvider, usePlayerState } from './player-state-context'
 import { GamePlayProvider, useGamePlay } from './game-play-context'
-import type { AdvancedParams } from './types'
+import type { AdvancedParams, SaveData } from './types'
+import * as saveService from './save-service'
 
 // 向后兼容：合并三个 Context 为旧 GameContextValue 形状
 export function useGame() {
   const appConfig = useAppConfig()
   const playerState = usePlayerState()
   const gamePlay = useGamePlay()
+  const [saveSlots, setSaveSlots] = useState<SaveData[]>([])
 
-  const state = {
+  const state = useMemo(() => ({
     screen: playerState.state.screen,
     worldCard: playerState.state.worldCard,
     playerState: playerState.state.playerState,
@@ -24,7 +26,7 @@ export function useGame() {
     currentNarration: '',
     isLoading: gamePlay.state.isLoading,
     error: gamePlay.state.error,
-    saveSlots: [] as any[],
+    saveSlots,
     apiKey: appConfig.state.apiKey,
     provider: appConfig.state.provider as any,
     model: appConfig.state.model,
@@ -37,7 +39,7 @@ export function useGame() {
     npcRuntime: playerState.state.npcRuntime,
     saveMode: appConfig.state.saveMode,
     accountName: appConfig.state.accountName,
-  }
+  }), [playerState.state, gamePlay.state, appConfig.state, saveSlots])
 
   // 向后兼容的 dispatch — 将旧 action 转发到对应的 setter/reducer
   const dispatch = useCallback((action: any) => {
@@ -90,13 +92,19 @@ export function useGame() {
       }
       // ---- PlayerState actions ----
       case 'START_GAME':
+        console.log('[dispatch] START_GAME → worldCard:', action.worldCard?.id, '| playerName:', action.playerName)
         playerState.actions.startGame(action.worldCard, action.playerName)
+        gamePlay.resetGamePlay()
         break
       case 'LOAD_SAVE':
+        console.log('[dispatch] LOAD_SAVE → worldCard:', action.worldCard?.id)
         playerState.actions.loadGame(action.save, action.worldCard)
+        gamePlay.resetGamePlay()
         break
       case 'RETURN_TO_MENU':
+        console.log('[dispatch] RETURN_TO_MENU')
         playerState.actions.returnToMenu()
+        gamePlay.resetGamePlay()
         break
       // ---- GamePlay actions ----
       case 'SET_LOADING':
@@ -122,21 +130,51 @@ export function useGame() {
     setApiBaseURL: appConfig.setApiBaseURL,
     setAdvancedParams: appConfig.setAdvancedParams,
     setSaveMode: appConfig.setSaveMode,
-    // PlayerState actions
-    startGame: playerState.actions.startGame,
+    // PlayerState actions — 包装以同时重置 GamePlay 对话历史
+    startGame: (worldCard: any, playerName: string) => {
+      playerState.actions.startGame(worldCard, playerName)
+      gamePlay.resetGamePlay()
+    },
     updateState: playerState.actions.updateState,
-    loadGame: playerState.actions.loadGame,
-    returnToMenu: playerState.actions.returnToMenu,
+    loadGame: (save: any, worldCard: any) => {
+      playerState.actions.loadGame(save, worldCard)
+      gamePlay.resetGamePlay()
+    },
+    returnToMenu: () => {
+      playerState.actions.returnToMenu()
+      gamePlay.resetGamePlay()
+    },
     // GamePlay actions
     setLoading: gamePlay.setLoading,
     setError: gamePlay.setError,
     archiveDialogue: gamePlay.archiveDialogue,
     clearError: gamePlay.clearError,
-    // Placeholder — GameScreen (Task 8) replaces these
-    submitAction: async () => {},
-    saveGame: async () => {},
-    deleteGame: async () => {},
-    refreshSaves: async () => {},
+    // 存档操作 — 委托给 saveService
+    saveGame: async (slot: number, slotName: string) => {
+      const data: SaveData = {
+        id: `slot_${slot}`,
+        slotName,
+        timestamp: Date.now(),
+        worldCardId: playerState.state.worldCard?.id || '',
+        playerState: playerState.state.playerState!,
+        dialogueHistory: gamePlay.state.dialogueHistory,
+        apiKey: appConfig.state.apiKey,
+      }
+      await saveService.saveToSlot(slot, data)
+      setSaveSlots(prev => {
+        const next = prev.filter(s => !s.id.startsWith(`slot_${slot}`))
+        next.push(data)
+        return next
+      })
+    },
+    deleteGame: async (slot: number) => {
+      await saveService.deleteSave(slot)
+      setSaveSlots(prev => prev.filter(s => !s.id.startsWith(`slot_${slot}`)))
+    },
+    refreshSaves: async () => {
+      const metas = await saveService.listSaveMetas()
+      setSaveSlots(metas as any)
+    },
   }
 
   return { state, dispatch, actions } as any

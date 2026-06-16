@@ -27,6 +27,7 @@ interface GamePlayContextValue {
   setError: (error: string) => void
   archiveDialogue: (history: DialogueEntry[]) => void
   clearError: () => void
+  resetGamePlay: () => void
 }
 
 const GamePlayContext = createContext<GamePlayContextValue | null>(null)
@@ -43,11 +44,17 @@ export function GamePlayProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const archiveDialogue = useCallback((history: DialogueEntry[]) => {
+    console.log('[GamePlay] archiveDialogue: 对话数', history.length, '| 第一条:', history[0]?.content?.slice(0, 30) ?? '(空)')
     setState(prev => ({ ...prev, dialogueHistory: history, isLoading: false }))
   }, [])
 
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }))
+  }, [])
+
+  const resetGamePlay = useCallback(() => {
+    console.log('[GamePlay] resetGamePlay → 清空对话历史')
+    setState(createInitialGamePlayState())
   }, [])
 
   const value = useMemo(() => ({
@@ -56,7 +63,8 @@ export function GamePlayProvider({ children }: { children: React.ReactNode }) {
     setError,
     archiveDialogue,
     clearError,
-  }), [state, setLoading, setError, archiveDialogue, clearError])
+    resetGamePlay,
+  }), [state, setLoading, setError, archiveDialogue, clearError, resetGamePlay])
 
   return (
     <GamePlayContext.Provider value={value}>

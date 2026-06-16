@@ -15,6 +15,9 @@ export interface EventBus {
   destroy(): void
 }
 
+/** 模块级共享单例 — GameScreen 写入，DialogueBox 读取 */
+export const sharedEventBus = createEventBus()
+
 export function createEventBus(): EventBus {
   const listeners = new Set<EventBusListener>()
   let buffer = ''

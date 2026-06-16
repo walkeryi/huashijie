@@ -183,24 +183,37 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
   const handleTest = async () => {
     if (!state.apiKey) { setTestStatus('fail'); setTestMessage('请先输入 API Key'); return }
     setTestStatus('testing'); setTestMessage('')
+
+    const payload = { apiKey: state.apiKey, provider: state.provider, model: state.model, customBaseURL: state.customBaseURL }
+    console.log('[test-connection 前端] 发送请求:', {
+      provider: payload.provider,
+      model: payload.model,
+      customBaseURL: payload.customBaseURL || '(无)',
+      apiKeyLen: payload.apiKey?.length,
+      apiKeyPrefix: payload.apiKey?.slice(0, 10),
+    })
+
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 10000)
     try {
       const res = await fetch('/api/test-connection', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ apiKey: state.apiKey, provider: state.provider, model: state.model, customBaseURL: state.customBaseURL }),
+        body: JSON.stringify(payload),
         signal: controller.signal,
       })
       clearTimeout(timer)
+      console.log('[test-connection 前端] 响应状态:', res.status, res.statusText)
       const data = await res.json()
+      console.log('[test-connection 前端] 响应数据:', data)
       if (data.ok) { setTestStatus('ok'); setTestMessage(`连接成功 · ${data.latency}ms`) }
       else { setTestStatus('fail'); setTestMessage(data.error || '连接失败') }
     } catch (e: unknown) {
       clearTimeout(timer)
+      console.error('[test-connection 前端] fetch 异常:', e)
       if (e instanceof DOMException && e.name === 'AbortError') {
         setTestStatus('fail'); setTestMessage('连接超时（10秒）')
       } else {
-        setTestStatus('fail'); setTestMessage('网络错误')
+        setTestStatus('fail'); setTestMessage('网络错误: ' + (e instanceof Error ? e.message : String(e)))
       }
     }
   }

@@ -2,12 +2,9 @@
 
 import { useRef, useEffect, useCallback } from 'react'
 import { useGame } from '@/lib/game-context'
-import { createEventBus } from '@/lib/event-bus'
+import { sharedEventBus } from '@/lib/event-bus'
 import { ModelIcon } from '@lobehub/icons'
 import type { DialogueEntry } from '@/lib/types'
-
-// 模块级 EventBus 单例 — 同一时刻只有一个流
-const eventBus = createEventBus()
 
 export default function DialogueBox() {
   const { state } = useGame()
@@ -45,9 +42,17 @@ export default function DialogueBox() {
     rafRef.current = requestAnimationFrame(tick)
   }, [])
 
+  // 新回合开始时重置打字机状态
+  useEffect(() => {
+    if (isLoading) {
+      bufferRef.current = ''
+      charIndexRef.current = 0
+    }
+  }, [isLoading])
+
   // 订阅 EventBus
   useEffect(() => {
-    const unsub = eventBus.on((chunk) => {
+    const unsub = sharedEventBus.on((chunk) => {
       bufferRef.current += chunk
       if (!rafRef.current) {
         charIndexRef.current = currentDomRef.current?.textContent?.length ?? 0

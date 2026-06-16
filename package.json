@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy": "git push origin master && ssh admin@8.138.248.158 \"cd /www/wwwroot/huashijie && git pull && npm ci && npm run build && pm2 restart huashijie\""
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.84",

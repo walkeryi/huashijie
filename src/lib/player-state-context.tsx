@@ -47,14 +47,14 @@ function createInitialPlayerState(): PlayerStateData {
 type PlayerAction =
   | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
   | { type: 'UPDATE_STATE';
-      attributeChanges: Record<string, number>
-      npcAffinityChanges: Record<string, number>
-      itemsGained: string[]
-      itemsLost: string[]
-      newFlags: string[]
-      lostFlags: string[]
+      attributeChanges?: Record<string, number>
+      npcAffinityChanges?: Record<string, number>
+      itemsGained?: string[]
+      itemsLost?: string[]
+      newFlags?: string[]
+      lostFlags?: string[]
       options: GameOption[]
-      attributeDefs: AttributeDef[]
+      attributeDefs?: AttributeDef[]
     }
   | { type: 'LOAD_SAVE'; save: SaveData; worldCard: WorldCard }
   | { type: 'RETURN_TO_MENU' }
@@ -91,33 +91,41 @@ function playerStateReducer(state: PlayerStateData, action: PlayerAction): Playe
       const ps = state.playerState
       if (!ps) return state
 
-      const newAttrs = clampAttributes(
-        ps.attributes,
-        action.attributeChanges,
-        action.attributeDefs,
-      )
+      const newAttrs = action.attributeChanges
+        ? clampAttributes(ps.attributes, action.attributeChanges, action.attributeDefs ?? [])
+        : ps.attributes
 
       const newNpcAffinities = { ...state.npcAffinities }
-      for (const [key, delta] of Object.entries(action.npcAffinityChanges)) {
-        if (key in newNpcAffinities) {
-          newNpcAffinities[key] = Math.max(0, Math.min(newNpcAffinities[key] + delta, 100))
+      if (action.npcAffinityChanges) {
+        for (const [key, delta] of Object.entries(action.npcAffinityChanges)) {
+          if (key in newNpcAffinities) {
+            newNpcAffinities[key] = Math.max(0, Math.min(newNpcAffinities[key] + delta, 100))
+          }
         }
       }
 
       let newInventory = [...(ps.inventory ?? [])]
-      for (const item of action.itemsGained) {
-        if (!newInventory.includes(item)) {
-          newInventory.push(item)
+      if (action.itemsGained) {
+        for (const item of action.itemsGained) {
+          if (!newInventory.includes(item)) {
+            newInventory.push(item)
+          }
         }
       }
-      newInventory = newInventory.filter(item => !action.itemsLost.includes(item))
+      if (action.itemsLost) {
+        newInventory = newInventory.filter(item => !action.itemsLost!.includes(item))
+      }
 
       const newFlags = { ...ps.flags }
-      for (const flag of action.newFlags) {
-        newFlags[flag] = true
+      if (action.newFlags) {
+        for (const flag of action.newFlags) {
+          newFlags[flag] = true
+        }
       }
-      for (const flag of action.lostFlags) {
-        newFlags[flag] = false
+      if (action.lostFlags) {
+        for (const flag of action.lostFlags) {
+          newFlags[flag] = false
+        }
       }
 
       return {
@@ -133,14 +141,23 @@ function playerStateReducer(state: PlayerStateData, action: PlayerAction): Playe
       }
     }
 
-    case 'LOAD_SAVE':
+    case 'LOAD_SAVE': {
+      const npcAffinities: Record<string, number> = {}
+      action.worldCard.npcs.forEach(n => { npcAffinities[n.id] = n.fields.initialAffinity ?? 0 })
+      const npcRuntime: Record<string, RuntimeNPCState> = {}
+      action.worldCard.npcs.forEach(n => {
+        npcRuntime[n.id] = { currentSelfPerception: '', currentState: '' }
+      })
       return {
         ...state,
         screen: 'playing',
         worldCard: action.worldCard,
         playerState: action.save.playerState,
         currentOptions: [],
+        npcAffinities,
+        npcRuntime,
       }
+    }
 
     case 'RETURN_TO_MENU':
       return createInitialPlayerState()
@@ -158,14 +175,14 @@ interface PlayerStateContextValue {
   actions: {
     startGame: (worldCard: WorldCard, playerName: string) => void
     updateState: (changes: {
-      attributeChanges: Record<string, number>
-      npcAffinityChanges: Record<string, number>
-      itemsGained: string[]
-      itemsLost: string[]
-      newFlags: string[]
-      lostFlags: string[]
+      attributeChanges?: Record<string, number>
+      npcAffinityChanges?: Record<string, number>
+      itemsGained?: string[]
+      itemsLost?: string[]
+      newFlags?: string[]
+      lostFlags?: string[]
       options: GameOption[]
-      attributeDefs: AttributeDef[]
+      attributeDefs?: AttributeDef[]
     }) => void
     loadGame: (save: SaveData, worldCard: WorldCard) => void
     returnToMenu: () => void
@@ -178,18 +195,19 @@ export function PlayerStateProvider({ children }: { children: React.ReactNode })
   const [state, dispatch] = useReducer(playerStateReducer, undefined, createInitialPlayerState)
 
   const startGame = useCallback((worldCard: WorldCard, playerName: string) => {
+    console.log('[PlayerState] START_GAME:', worldCard.id, '| 玩家:', playerName)
     dispatch({ type: 'START_GAME', worldCard, playerName })
   }, [])
 
   const updateState = useCallback((changes: {
-    attributeChanges: Record<string, number>
-    npcAffinityChanges: Record<string, number>
-    itemsGained: string[]
-    itemsLost: string[]
-    newFlags: string[]
-    lostFlags: string[]
+    attributeChanges?: Record<string, number>
+    npcAffinityChanges?: Record<string, number>
+    itemsGained?: string[]
+    itemsLost?: string[]
+    newFlags?: string[]
+    lostFlags?: string[]
     options: GameOption[]
-    attributeDefs: AttributeDef[]
+    attributeDefs?: AttributeDef[]
   }) => {
     dispatch({ type: 'UPDATE_STATE', ...changes })
   }, [])
@@ -199,6 +217,7 @@ export function PlayerStateProvider({ children }: { children: React.ReactNode })
   }, [])
 
   const returnToMenu = useCallback(() => {
+    console.log('[PlayerState] RETURN_TO_MENU')
     dispatch({ type: 'RETURN_TO_MENU' })
   }, [])
 

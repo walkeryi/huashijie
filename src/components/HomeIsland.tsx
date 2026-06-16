@@ -51,6 +51,7 @@ export default function HomeIsland() {
   const handleStart = () => {
     if (!selectedCard) return
     const name = playerName.trim() || '冒险者'
+    console.log('[HomeIsland] handleStart → card:', selectedCard.id, '| name:', name, '| 当前dialogueHistory长度:', state.dialogueHistory.length)
     actions.startGame(selectedCard, name)
     router.push('/game')
   }
