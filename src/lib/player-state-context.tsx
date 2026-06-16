@@ -142,12 +142,20 @@ function playerStateReducer(state: PlayerStateData, action: PlayerAction): Playe
     }
 
     case 'LOAD_SAVE': {
+      // 始终用世界卡 NPC 初始化（覆盖后新增的 NPC 也能获得初始值）
       const npcAffinities: Record<string, number> = {}
       action.worldCard.npcs.forEach(n => { npcAffinities[n.id] = n.fields.initialAffinity ?? 0 })
+      // 存档值覆盖（已存在的 NPC 取存档进度，新增 NPC 保留 initialAffinity）
+      if (action.save.npcAffinities) {
+        Object.assign(npcAffinities, action.save.npcAffinities)
+      }
       const npcRuntime: Record<string, RuntimeNPCState> = {}
       action.worldCard.npcs.forEach(n => {
         npcRuntime[n.id] = { currentSelfPerception: '', currentState: '' }
       })
+      if (action.save.npcRuntime) {
+        Object.assign(npcRuntime, action.save.npcRuntime)
+      }
       return {
         ...state,
         screen: 'playing',

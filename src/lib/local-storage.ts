@@ -59,6 +59,8 @@ export function localSaveToSlot(
   playerState: PlayerState,
   dialogueHistory: DialogueEntry[],
   apiKey: string,
+  npcAffinities: Record<string, number>,
+  npcRuntime: Record<string, import('./types').RuntimeNPCState>,
 ): void {
   if (typeof window === 'undefined') return
   const data: SaveData = {
@@ -69,6 +71,8 @@ export function localSaveToSlot(
     playerState,
     dialogueHistory,
     apiKey,
+    npcAffinities,
+    npcRuntime,
   }
   localStorage.setItem(SAVE_PREFIX + slot, JSON.stringify(data))
 }
@@ -79,6 +83,8 @@ export function localAutoSave(
   playerState: PlayerState,
   dialogueHistory: DialogueEntry[],
   apiKey: string,
+  npcAffinities: Record<string, number>,
+  npcRuntime: Record<string, import('./types').RuntimeNPCState>,
 ): void {
   if (typeof window === 'undefined') return
   const data: SaveData = {
@@ -89,6 +95,8 @@ export function localAutoSave(
     playerState,
     dialogueHistory,
     apiKey,
+    npcAffinities,
+    npcRuntime,
   }
   localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data))
 }

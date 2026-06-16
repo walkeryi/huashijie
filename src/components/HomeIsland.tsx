@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useGame } from '@/lib/game-context'
 import { presetWorldCards } from '@/data/world-cards'
 import { listCustomCards, deleteCustomCard } from '@/lib/custom-cards'
-import { WorldCard, SaveData } from '@/lib/types'
+import { WorldCard, SaveMeta } from '@/lib/types'
 import * as saveService from '@/lib/save-service'
 
 type Screen = 'menu' | 'worlds' | 'loads'
@@ -61,23 +61,22 @@ export default function HomeIsland() {
   }
 
   // ====== 读档 ======
-  const handleLoadSave = async (save: SaveData) => {
+  const handleLoadSave = async (save: SaveMeta) => {
     const card = allCards.find(c => c.id === save.worldCardId)
     if (!card) return
 
-    let fullSave = save
-    if (saveService.isOnline() && !save.dialogueHistory?.length) {
-      // 在线模式需要加载完整数据
-      for (let s = 0; s <= 3; s++) {
-        const loaded = await saveService.loadSave(s)
-        if (loaded?.id === save.id) { fullSave = loaded; break }
-      }
+    // SaveMeta 不含 playerState/dialogueHistory，在线和离线都需要加载完整存档数据
+    let fullSave: any = save
+    for (let s = 0; s <= 3; s++) {
+      const loaded = await saveService.loadSave(s)
+      if (loaded?.id === save.id) { fullSave = loaded; break }
     }
+    console.log('[HomeIsland] handleLoadSave → worldCard:', card.id, '| playerState:', !!fullSave.playerState, '| dialogueHistory:', fullSave.dialogueHistory?.length)
     actions.loadGame(fullSave, card)
     router.push('/game')
   }
 
-  const handleDeleteSave = async (save: SaveData) => {
+  const handleDeleteSave = async (save: SaveMeta) => {
     if (!confirm(`删除「${save.slotName}」？`)) return
     try {
       for (let s = 0; s <= 3; s++) {
@@ -143,7 +142,7 @@ export default function HomeIsland() {
             <p className="text-center text-[var(--text-secondary)] mb-6">没有找到存档</p>
           ) : (
             <div className="space-y-3 mb-6">
-              {saveSlots.map((save: SaveData, i: number) => (
+              {saveSlots.map((save: SaveMeta, i: number) => (
                 <div key={save.id || `save-${i}`} className="flex gap-2">
                   <button
                     onClick={() => handleLoadSave(save)}
@@ -152,7 +151,7 @@ export default function HomeIsland() {
                     <div className="font-medium text-[var(--text-primary)]">{save.slotName}</div>
                     <div className="text-sm text-[var(--text-secondary)] mt-1">
                       {worldCardNameMap[save.worldCardId] || save.worldCardId}
-                      {' — '}{save.playerState?.playerName || '未知'}
+                      {' — '}{save.playerName || '未知'}
                     </div>
                     <div className="text-xs text-[var(--text-secondary)] mt-0.5">
                       {new Date(save.timestamp).toLocaleString('zh-CN')}

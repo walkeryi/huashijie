@@ -23,7 +23,7 @@ export default function NPCPanel({ open, onClose, npcs, affinities }: NPCPanelPr
           <p className="text-[var(--text-secondary)] text-sm">暂无 NPC</p>
         ) : (
           <div className="space-y-3">
-            {npcs.map(npc => {
+            {npcs.filter(npc => !npc.isMainCharacter).map(npc => {
               const val = affinities[npc.id] ?? npc.fields.initialAffinity ?? 0
               const pct = Math.max(0, Math.min(100, val))
               const barColor = val >= 0 ? 'var(--accent)' : 'var(--danger)'

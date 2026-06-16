@@ -87,8 +87,8 @@ describe('buildSystemPrompt', () => {
   it('includes NPC behavior rules', () => {
     const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
-    expect(prompt).toContain('好感度高的 NPC 主动提供帮助')
-    expect(prompt).toContain('NPC 对话约束')
+    expect(prompt).toContain('好感度变化规则')
+    expect(prompt).toContain('与 NPC')
   })
 
   it('sanitizes player name to prevent prompt injection', () => {

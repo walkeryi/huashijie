@@ -45,6 +45,9 @@ export default function GameScreen() {
   const router = useRouter()
   const hasTriggeredRef = useRef(false)
   const abortRef = useRef<AbortController | null>(null)
+  // 追踪最新 playerState/npcAffinities，避免自动存档闭包捕获过期值
+  const latestStateRef = useRef({ playerState: state.playerState, npcAffinities: state.npcAffinities, npcRuntime: state.npcRuntime })
+  latestStateRef.current = { playerState: state.playerState, npcAffinities: state.npcAffinities, npcRuntime: state.npcRuntime }
 
   // 核心交互 — readDataStream 消费 SSE 流
   const submitAction = useCallback(async (optionText: string) => {
@@ -173,17 +176,20 @@ export default function GameScreen() {
       const newHistory = [...state.dialogueHistory, playerEntry, narratorEntry]
       actions.archiveDialogue(newHistory)
 
-      // 后台自动存档（2s 防抖）
+      // 后台自动存档（2s 防抖）— 从 ref 读取最新状态，避免闭包过期
+      const latest = latestStateRef.current
       const saveData = {
         id: 'autosave',
         slotName: '自动存档',
         timestamp: Date.now(),
         worldCardId: state.worldCard!.id,
-        playerState: state.playerState!,
+        playerState: latest.playerState!,
         dialogueHistory: newHistory,
         apiKey: state.apiKey,
+        npcAffinities: latest.npcAffinities,
+        npcRuntime: latest.npcRuntime,
       }
-      debouncedAutoSave(saveData).catch(() => {})
+      debouncedAutoSave(saveData).catch(err => console.warn('[GameScreen] 自动存档失败:', err))
 
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'AbortError') {

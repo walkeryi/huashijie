@@ -13,6 +13,7 @@ function makePlayerState(overrides?: Partial<PlayerState>): PlayerState {
 }
 
 const TEST_API_KEY = 'test-key-123'
+const EMPTY_RECORD: Record<string, never> = {}
 
 function makeDialogueHistory(): DialogueEntry[] {
   return [
@@ -44,10 +45,10 @@ describe('storage', () => {
   })
 
   it('lists saved games sorted by newest first', async () => {
-    saveToSlot(1, 's1', '存档1', 'world_a', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    saveToSlot(1, 's1', '存档1', 'world_a', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
     // 确保时间戳不同
     await new Promise(r => setTimeout(r, 5))
-    saveToSlot(2, 's2', '存档2', 'world_b', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    saveToSlot(2, 's2', '存档2', 'world_b', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
 
     const saves = listSaves()
     expect(saves).toHaveLength(2)
@@ -58,7 +59,7 @@ describe('storage', () => {
   // ---- saveToSlot ----
 
   it('persists a save to a numbered slot', () => {
-    saveToSlot(1, 'id_1', '我的存档', 'world_x', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    saveToSlot(1, 'id_1', '我的存档', 'world_x', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
 
     const raw = localStorage.getItem('adventure_save_1')
     expect(raw).not.toBeNull()
@@ -71,8 +72,8 @@ describe('storage', () => {
   })
 
   it('overwrites an existing slot', () => {
-    saveToSlot(1, 'id_a', '旧存档', 'world_a', makePlayerState(), [], TEST_API_KEY)
-    saveToSlot(1, 'id_b', '新存档', 'world_b', makePlayerState(), [], TEST_API_KEY)
+    saveToSlot(1, 'id_a', '旧存档', 'world_a', makePlayerState(), [], TEST_API_KEY, {}, {})
+    saveToSlot(1, 'id_b', '新存档', 'world_b', makePlayerState(), [], TEST_API_KEY, {}, {})
 
     const saves = listSaves()
     expect(saves).toHaveLength(1)
@@ -82,7 +83,7 @@ describe('storage', () => {
   // ---- autoSave ----
 
   it('saves to the autosave key', () => {
-    autoSave('world_z', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    autoSave('world_z', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
 
     const raw = localStorage.getItem('adventure_autosave')
     expect(raw).not.toBeNull()
@@ -93,7 +94,7 @@ describe('storage', () => {
   })
 
   it('autosave appears in listSaves', () => {
-    autoSave('world_x', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    autoSave('world_x', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
     const saves = listSaves()
     expect(saves).toHaveLength(1)
     expect(saves[0].slotName).toBe('自动存档')
@@ -102,7 +103,7 @@ describe('storage', () => {
   // ---- loadSave ----
 
   it('loads a save by slot number', () => {
-    saveToSlot(2, 'my_id', '测试档', 'world_test', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    saveToSlot(2, 'my_id', '测试档', 'world_test', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
 
     const loaded = loadSave(2)
     expect(loaded).not.toBeNull()
@@ -111,7 +112,7 @@ describe('storage', () => {
   })
 
   it('loads the autosave by key', () => {
-    autoSave('world_auto', makePlayerState(), makeDialogueHistory(), TEST_API_KEY)
+    autoSave('world_auto', makePlayerState(), makeDialogueHistory(), TEST_API_KEY, {}, {})
 
     const loaded = loadSave('autosave')
     expect(loaded).not.toBeNull()
@@ -133,7 +134,7 @@ describe('storage', () => {
   // ---- deleteSave ----
 
   it('deletes a save from a slot', () => {
-    saveToSlot(3, 'id', '待删除', 'world', makePlayerState(), [], TEST_API_KEY)
+    saveToSlot(3, 'id', '待删除', 'world', makePlayerState(), [], TEST_API_KEY, {}, {})
 
     expect(listSaves()).toHaveLength(1)
 
@@ -154,6 +155,8 @@ describe('storage', () => {
       playerState: makePlayerState(),
       dialogueHistory: makeDialogueHistory(),
       apiKey: TEST_API_KEY,
+      npcAffinities: {},
+      npcRuntime: {},
     }
 
     const summary = getSaveSummary(save)
@@ -171,6 +174,8 @@ describe('storage', () => {
       playerState: makePlayerState(),
       dialogueHistory: [],
       apiKey: TEST_API_KEY,
+      npcAffinities: {},
+      npcRuntime: {},
     }
 
     const summary = getSaveSummary(save)

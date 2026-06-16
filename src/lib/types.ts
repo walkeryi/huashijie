@@ -148,6 +148,8 @@ export interface SaveData {
   playerState: PlayerState
   dialogueHistory: DialogueEntry[]
   apiKey: string
+  npcAffinities: Record<string, number>
+  npcRuntime: Record<string, RuntimeNPCState>
 }
 
 // ========== 游戏上下文 ==========

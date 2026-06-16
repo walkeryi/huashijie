@@ -36,7 +36,7 @@ export async function saveToSlot(slot: number, data: SaveData): Promise<void> {
     return
   }
   local.localSaveToSlot(slot, data.id, data.slotName, data.worldCardId,
-    data.playerState, data.dialogueHistory, data.apiKey)
+    data.playerState, data.dialogueHistory, data.apiKey, data.npcAffinities, data.npcRuntime)
 }
 
 /** 自动存档（在线失败时静默回退到本地） */
@@ -50,7 +50,7 @@ export async function autoSave(data: SaveData): Promise<void> {
       console.warn('在线自动存档失败，回退到本地存档')
     }
   }
-  local.localAutoSave(data.worldCardId, data.playerState, data.dialogueHistory, data.apiKey)
+  local.localAutoSave(data.worldCardId, data.playerState, data.dialogueHistory, data.apiKey, data.npcAffinities, data.npcRuntime)
 }
 
 /** 加载完整存档 */

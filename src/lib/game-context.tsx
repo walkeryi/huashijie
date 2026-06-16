@@ -7,7 +7,7 @@ import React, { type ReactNode, useCallback, useState, useMemo } from 'react'
 import { AppConfigProvider, useAppConfig, loadApiConfigForProvider } from './app-config-context'
 import { PlayerStateProvider, usePlayerState } from './player-state-context'
 import { GamePlayProvider, useGamePlay } from './game-play-context'
-import type { AdvancedParams, SaveData } from './types'
+import type { AdvancedParams, SaveData, SaveMeta } from './types'
 import * as saveService from './save-service'
 
 // 向后兼容：合并三个 Context 为旧 GameContextValue 形状
@@ -15,7 +15,7 @@ export function useGame() {
   const appConfig = useAppConfig()
   const playerState = usePlayerState()
   const gamePlay = useGamePlay()
-  const [saveSlots, setSaveSlots] = useState<SaveData[]>([])
+  const [saveSlots, setSaveSlots] = useState<SaveMeta[]>([])
 
   const state = useMemo(() => ({
     screen: playerState.state.screen,
@@ -99,7 +99,11 @@ export function useGame() {
       case 'LOAD_SAVE':
         console.log('[dispatch] LOAD_SAVE → worldCard:', action.worldCard?.id)
         playerState.actions.loadGame(action.save, action.worldCard)
-        gamePlay.resetGamePlay()
+        if (action.save.dialogueHistory?.length) {
+          gamePlay.archiveDialogue(action.save.dialogueHistory)
+        } else {
+          gamePlay.resetGamePlay()
+        }
         break
       case 'RETURN_TO_MENU':
         console.log('[dispatch] RETURN_TO_MENU')
@@ -119,7 +123,7 @@ export function useGame() {
     }
   }, [appConfig, playerState, gamePlay])
 
-  const actions = {
+  const actions = useMemo(() => ({
     // AppConfig setters
     setApiKey: appConfig.setApiKey,
     setProvider: appConfig.setProvider,
@@ -138,7 +142,12 @@ export function useGame() {
     updateState: playerState.actions.updateState,
     loadGame: (save: any, worldCard: any) => {
       playerState.actions.loadGame(save, worldCard)
-      gamePlay.resetGamePlay()
+      // 从存档恢复对话历史，不重置
+      if (save.dialogueHistory?.length) {
+        gamePlay.archiveDialogue(save.dialogueHistory)
+      } else {
+        gamePlay.resetGamePlay()
+      }
     },
     returnToMenu: () => {
       playerState.actions.returnToMenu()
@@ -159,11 +168,21 @@ export function useGame() {
         playerState: playerState.state.playerState!,
         dialogueHistory: gamePlay.state.dialogueHistory,
         apiKey: appConfig.state.apiKey,
+        npcAffinities: playerState.state.npcAffinities,
+        npcRuntime: playerState.state.npcRuntime,
       }
       await saveService.saveToSlot(slot, data)
       setSaveSlots(prev => {
         const next = prev.filter(s => !s.id.startsWith(`slot_${slot}`))
-        next.push(data)
+        const meta: SaveMeta = {
+          slot,
+          id: data.id,
+          slotName: data.slotName,
+          timestamp: data.timestamp,
+          worldCardId: data.worldCardId,
+          playerName: data.playerState?.playerName ?? '',
+        }
+        next.push(meta)
         return next
       })
     },
@@ -173,9 +192,9 @@ export function useGame() {
     },
     refreshSaves: async () => {
       const metas = await saveService.listSaveMetas()
-      setSaveSlots(metas as any)
+      setSaveSlots(metas)
     },
-  }
+  }), [appConfig, playerState, gamePlay, saveSlots])
 
   return { state, dispatch, actions } as any
 }
