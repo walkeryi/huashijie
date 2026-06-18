@@ -155,9 +155,10 @@ export default function GameScreen() {
         npcAffinities: state.npcAffinities,
         npcRuntime: state.npcRuntime,
         ...base,
+        stage: 'plan',
       }
 
-      const planRes = await fetch('/api/adventure/plan', {
+      const planRes = await fetch('/api/adventure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(planPayload),
@@ -200,9 +201,10 @@ export default function GameScreen() {
         dialogueHistory: [...state.dialogueHistory, playerEntry],
         memoryFacts: state.memoryFacts,
         ...base,
+        stage: 'narrate',
       }
 
-      const narrateRes = await fetch('/api/adventure/narrate', {
+      const narrateRes = await fetch('/api/adventure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(narratePayload),
@@ -253,16 +255,18 @@ export default function GameScreen() {
             worldCard: state.worldCard,
             playerState: updatedPlayerState,
             ...base,
+            stage: 'choices',
           }),
           signal: controller.signal,
         }),
-        fetch('/api/adventure/extract-facts', {
+        fetch('/api/adventure', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             narration: fullNarration,
             existingFacts: state.memoryFacts,
             ...base,
+            stage: 'extract-facts',
           }),
           signal: controller.signal,
         }),

@@ -1,6 +1,4 @@
-// src/app/api/adventure/plan/route.ts
-// Stage 1: Turn Planner — 理解玩家意图，决定本轮状态变更
-// 使用 generateText + Output.json()（v6 API），兼容不支持 structuredOutputs 的 Provider
+// src/lib/adventure-plan.ts — Stage 1: Turn Planner（generateText + Output.json()）
 
 import { NextRequest } from 'next/server'
 import { generateText, Output } from 'ai'
@@ -279,7 +277,7 @@ function normalizePlanOutput(raw: Record<string, unknown>): Record<string, unkno
   return result
 }
 
-export async function POST(request: NextRequest) {
+export async function handlePlan(request: NextRequest) {
   const start = Date.now()
 
   try {

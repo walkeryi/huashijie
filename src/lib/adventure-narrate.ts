@@ -1,5 +1,4 @@
-// src/app/api/adventure/narrate/route.ts
-// Stage 2: Story Writer — 把变更结果 + 玩家行动写成沉浸式叙述（SSE 流）
+// src/lib/adventure-narrate.ts — Stage 2: Story Writer（streamText SSE 流）
 
 import { NextRequest } from 'next/server'
 import { streamText } from 'ai'
@@ -96,7 +95,7 @@ ${playerAction}${changeSummary}
   ]
 }
 
-export async function POST(request: NextRequest) {
+export async function handleNarrate(request: NextRequest) {
   const start = Date.now()
 
   try {

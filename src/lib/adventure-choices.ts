@@ -1,5 +1,4 @@
-// src/app/api/adventure/choices/route.ts
-// Stage 3: Choices Maker — 基于叙事内容生成下一步选项（generateText + Output.json() v6 API）
+// src/lib/adventure-choices.ts — Stage 3: Choices Maker（generateText + Output.json()）
 
 import { NextRequest } from 'next/server'
 import { generateText, Output } from 'ai'
@@ -97,7 +96,7 @@ function parseChoicesJSON(text: string): { options: Record<string, unknown>[] } 
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function handleChoices(request: NextRequest) {
   const start = Date.now()
 
   try {

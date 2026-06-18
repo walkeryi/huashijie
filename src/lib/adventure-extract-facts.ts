@@ -1,12 +1,10 @@
-// src/app/api/adventure/extract-facts/route.ts
-// 结构化记忆槽 — 事实提取端点
-// 每轮游戏旁白输出后，客户端同步调用此端点，用 generateText 提取 ≤15 字关键事实
+// src/lib/adventure-extract-facts.ts — 结构化记忆槽事实提取
 
 import { NextRequest } from 'next/server'
 import { generateText } from 'ai'
 import { createModelInstance, resolveApiKey } from '@/lib/create-model-instance'
 
-export async function POST(request: NextRequest) {
+export async function handleExtractFacts(request: NextRequest) {
   const start = Date.now()
 
   try {
