@@ -159,11 +159,11 @@ AI 引擎已重构为**三阶段管线**，每个阶段独立注入上下文：
 
 ## 相关文档
 
-→ ai-engine.md：三阶段管线架构、Provider 选择、SSE 流处理
-→ state-management.md：三层 Context 架构
-→ save-system.md：存档系统（含 memoryFacts 持久化）
-→ event-bus-typewriter.md：SSE 流客户端消费和打字机效果
-→ game-options-conditions.md：Choices 生成的 options 条件评估
+→ ../business/ai-engine.md：三阶段管线架构、Provider 选择、SSE 流处理
+→ ../business/state-management.md：三层 Context 架构
+→ ../business/save-system.md：存档系统（含 memoryFacts 持久化）
+→ ../business/event-bus-typewriter.md：SSE 流客户端消费和打字机效果
+→ ../business/game-options-conditions.md：Choices 生成的 options 条件评估
 
 ## 边界
 

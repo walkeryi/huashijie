@@ -147,5 +147,5 @@ pm2 stop huashijie    # 停止
 ## 相关文档
 
 → technical-architecture.md：技术栈全貌、构建命令
-→ ai-engine.md：API key 和 provider 配置
-→ save-system.md：服务端存档路径（`data/saves/`）
+→ ../business/ai-engine.md：API key 和 provider 配置
+→ ../business/save-system.md：服务端存档路径（`data/saves/`）

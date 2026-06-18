@@ -276,12 +276,12 @@ sharedEventBus (模块级单例)
 
 ## 相关文档
 
-→ ai-engine.md：AI 引擎的 Provider 选择、Tool Use 协议、SSE 流处理、API 配置面板
-→ state-management.md：三层 Context 架构详解、reducer 守卫模式、向后兼容设计
-→ event-bus-typewriter.md：EventBus 单例契约、RAF 打字机动画、SSE 解析器、降级兜底
-→ theme-system.md：CSS data-theme 切换、SSR Cookie 同步、三路写入、字号管理
-→ save-system.md：本地/云端存档、统一存档服务、6 条 REST API 路由
-→ world-card-system.md：WorldCard 类型定义、预设卡、创作台、NPC 字段体系
-→ npc-affinity-system.md：NPC 好感度等级、条件解析、概率模型
-→ game-options-conditions.md：选项条件评估、六种运算符、延迟动画、自由文本输入
+→ ../business/ai-engine.md：AI 引擎的 Provider 选择、Tool Use 协议、SSE 流处理、API 配置面板
+→ ../business/state-management.md：三层 Context 架构详解、reducer 守卫模式、向后兼容设计
+→ ../business/event-bus-typewriter.md：EventBus 单例契约、RAF 打字机动画、SSE 解析器、降级兜底
+→ ../business/theme-system.md：CSS data-theme 切换、SSR Cookie 同步、三路写入、字号管理
+→ ../business/save-system.md：本地/云端存档、统一存档服务、6 条 REST API 路由
+→ ../business/world-card-system.md：WorldCard 类型定义、预设卡、创作台、NPC 字段体系
+→ ../business/npc-affinity-system.md：NPC 好感度等级、条件解析、概率模型
+→ ../business/game-options-conditions.md：选项条件评估、六种运算符、延迟动画、自由文本输入
 → react-patterns.md：React 19 / Next.js 16 框架陷阱与最佳实践
