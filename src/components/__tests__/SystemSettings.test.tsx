@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import type { GameState } from '@/lib/types'
 
 // 必须在 mock 之前定义 mock 值
 const mockSetApiKey = vi.fn()
@@ -7,7 +8,7 @@ const mockSetProvider = vi.fn()
 const mockSetModel = vi.fn()
 const mockSetCustomBaseURL = vi.fn()
 
-let mockState: any
+let mockState: GameState
 const mockDispatch = vi.fn()
 
 vi.mock('@lobehub/icons', () => ({
@@ -47,8 +48,18 @@ vi.mock('@/lib/theme', () => ({
 
 import SystemSettings from '../SystemSettings'
 
-function setupState(overrides?: Partial<any>) {
+function setupState(overrides?: Partial<GameState>) {
   mockState = {
+    screen: 'playing',
+    worldCard: null,
+    playerState: null,
+    dialogueHistory: [],
+    memoryFacts: [],
+    currentOptions: [],
+    currentNarration: '',
+    isLoading: false,
+    error: null,
+    saveSlots: [],
     apiKey: 'sk-test-key-12345',
     provider: 'deepseek',
     providerName: 'DeepSeek',
@@ -57,6 +68,10 @@ function setupState(overrides?: Partial<any>) {
     apiBaseURL: 'https://api.deepseek.com',
     protocol: 'openai',
     advancedParams: {},
+    npcAffinities: {},
+    npcRuntime: {},
+    saveMode: 'offline',
+    accountName: '',
     ...overrides,
   }
 }

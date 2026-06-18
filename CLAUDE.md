@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 沟通原则
+
+- **不要随意推测论断，请查明事实后再诊断；事实不足时需要如实告诉我。**
+
 ## 常用命令
 
 ```bash
@@ -77,6 +81,7 @@ npx tsc --noEmit     # 类型检查
 <!-- TECH_REFS_LIST:START -->
 ## 技术参考
 
+- context-management: LLM 对话上下文管理：多层架构（system prompt / 结构化记忆槽 / 窗口裁剪 / fallback）、设计决策记录、放弃的方案、未来规划 → docs/as-built/context-management.md
 - deployment: 生产环境部署：阿里云 ECS（宝塔面板）、GitHub 仓库、Node.js + PM2 + Nginx、更新流程、常见问题 → docs/as-built/deployment.md
 - react-patterns: React 19 and Next.js 16 specific patterns, Strict Mode pitfalls, async cookies, useRef, useOptimistic, RSC boundaries → docs/as-built/react-patterns.md
 - technical-architecture: 项目技术架构全貌：技术栈选型、RSC+客户端岛屿架构、三层 Context 状态管理、SSE 流数据管道、路由体系、样式方案、测试策略 → docs/as-built/technical-architecture.md

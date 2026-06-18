@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildSystemPrompt } from '../route'
+import { buildPlannerSystemPrompt } from '../plan/route'
 import { WorldCard, PlayerState } from '@/lib/types'
 
 function makeWorldCard(overrides?: Partial<WorldCard>): WorldCard {
@@ -35,10 +35,10 @@ function makePlayerState(overrides?: Partial<PlayerState>): PlayerState {
   }
 }
 
-describe('buildSystemPrompt', () => {
+describe('buildPlannerSystemPrompt', () => {
   it('includes the world description in the prompt', () => {
     const card = makeWorldCard({ description: '龙与地下城的世界。' })
-    const prompt = buildSystemPrompt(card, makePlayerState(), {})
+    const prompt = buildPlannerSystemPrompt(card, makePlayerState(), {})
 
     expect(prompt).toContain('龙与地下城的世界。')
   })
@@ -46,7 +46,7 @@ describe('buildSystemPrompt', () => {
   it('includes player name in the prompt', () => {
     const card = makeWorldCard()
     const player = makePlayerState({ playerName: '小明' })
-    const prompt = buildSystemPrompt(card, player, {})
+    const prompt = buildPlannerSystemPrompt(card, player, {})
 
     expect(prompt).toContain('小明')
   })
@@ -54,22 +54,21 @@ describe('buildSystemPrompt', () => {
   it('formats attribute values with icons and names', () => {
     const card = makeWorldCard()
     const player = makePlayerState({ attributes: { courage: 7, wisdom: 3 } })
-    const prompt = buildSystemPrompt(card, player, {})
+    const prompt = buildPlannerSystemPrompt(card, player, {})
 
     expect(prompt).toContain('⚔️ 勇气: 7/10')
     expect(prompt).toContain('🧠 智慧: 3/10')
   })
 
-  it('includes tool-call output instructions', () => {
-    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
+  it('includes state change instructions', () => {
+    const prompt = buildPlannerSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
-    expect(prompt).toContain('update_state')
-    expect(prompt).toContain('选项')
-    expect(prompt).toContain('属性变化')
+    expect(prompt).toContain('状态变更')
+    expect(prompt).toContain('JSON')
   })
 
   it('includes NPC affinity, items, and flags in player state section', () => {
-    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), { blacksmith: 45 })
+    const prompt = buildPlannerSystemPrompt(makeWorldCard(), makePlayerState(), { blacksmith: 45 })
 
     expect(prompt).toContain('好感')
     expect(prompt).toContain('物品栏')
@@ -77,15 +76,15 @@ describe('buildSystemPrompt', () => {
   })
 
   it('includes narrative rules in Chinese', () => {
-    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
+    const prompt = buildPlannerSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
-    expect(prompt).toContain('文字冒险游戏的叙事引擎')
-    expect(prompt).toContain('200-400字')
-    expect(prompt).toContain('工具')
+    expect(prompt).toContain('文字冒险游戏')
+    expect(prompt).toContain('属性变化规则')
+    expect(prompt).toContain('好感度变化规则')
   })
 
   it('includes NPC behavior rules', () => {
-    const prompt = buildSystemPrompt(makeWorldCard(), makePlayerState(), {})
+    const prompt = buildPlannerSystemPrompt(makeWorldCard(), makePlayerState(), {})
 
     expect(prompt).toContain('好感度变化规则')
     expect(prompt).toContain('与 NPC')
@@ -94,7 +93,7 @@ describe('buildSystemPrompt', () => {
   it('sanitizes player name to prevent prompt injection', () => {
     const card = makeWorldCard()
     const player = makePlayerState({ playerName: '恶意\n名字\r带换行' })
-    const prompt = buildSystemPrompt(card, player, {})
+    const prompt = buildPlannerSystemPrompt(card, player, {})
 
     // 换行和回车应被过滤
     expect(prompt).not.toContain('\n名字')
@@ -105,7 +104,7 @@ describe('buildSystemPrompt', () => {
     const card = makeWorldCard()
     const longName = 'A'.repeat(100)
     const player = makePlayerState({ playerName: longName })
-    const prompt = buildSystemPrompt(card, player, {})
+    const prompt = buildPlannerSystemPrompt(card, player, {})
 
     // 名字被截断为 50 字符
     expect(prompt).toContain('A'.repeat(50))
@@ -115,7 +114,7 @@ describe('buildSystemPrompt', () => {
   it('falls back attribute display when no matching definition', () => {
     const card = makeWorldCard()
     const player = makePlayerState({ attributes: { unknown_attr: 42 } })
-    const prompt = buildSystemPrompt(card, player, {})
+    const prompt = buildPlannerSystemPrompt(card, player, {})
 
     // 未知属性用 key: val 格式
     expect(prompt).toContain('unknown_attr: 42')
@@ -128,7 +127,7 @@ describe('buildSystemPrompt', () => {
           { id: 'blacksmith', isMainCharacter: false, fields: { id: 'blacksmith', isMainCharacter: false, name: '铁匠老王', initialAffinity: 50, gender: '男', origin: '', dialogueTone: '粗犷', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
         ],
       })
-      const prompt = buildSystemPrompt(card, makePlayerState(), { blacksmith: 45 })
+      const prompt = buildPlannerSystemPrompt(card, makePlayerState(), { blacksmith: 45 })
 
       expect(prompt).toContain('铁匠老王')
       expect(prompt).toContain('好感: 45/100')
@@ -140,14 +139,14 @@ describe('buildSystemPrompt', () => {
           { id: 'blacksmith', isMainCharacter: false, fields: { id: 'blacksmith', isMainCharacter: false, name: '铁匠老王', initialAffinity: 50, gender: '男', origin: '', dialogueTone: '粗犷', birthday: '', dialogueExamples: '', personalityTags: [], appearance: '', currentAttire: '' } },
         ],
       })
-      const prompt = buildSystemPrompt(card, makePlayerState(), {})
+      const prompt = buildPlannerSystemPrompt(card, makePlayerState(), {})
 
       expect(prompt).toContain('好感: 50/100')
     })
 
     it('shows "无" when there are no NPCs', () => {
       const card = makeWorldCard({ npcs: [] })
-      const prompt = buildSystemPrompt(card, makePlayerState(), {})
+      const prompt = buildPlannerSystemPrompt(card, makePlayerState(), {})
 
       expect(prompt).toContain('NPC 关系\n无')
     })
@@ -156,7 +155,7 @@ describe('buildSystemPrompt', () => {
   describe('物品栏 section', () => {
     it('shows inventory items', () => {
       const player = makePlayerState({ inventory: ['锈蚀钥匙', '草药'] })
-      const prompt = buildSystemPrompt(makeWorldCard(), player, {})
+      const prompt = buildPlannerSystemPrompt(makeWorldCard(), player, {})
 
       expect(prompt).toContain('- 锈蚀钥匙')
       expect(prompt).toContain('- 草药')
@@ -164,7 +163,7 @@ describe('buildSystemPrompt', () => {
 
     it('shows "空" when inventory is empty', () => {
       const player = makePlayerState({ inventory: [] })
-      const prompt = buildSystemPrompt(makeWorldCard(), player, {})
+      const prompt = buildPlannerSystemPrompt(makeWorldCard(), player, {})
 
       expect(prompt).toContain('物品栏\n空')
     })
@@ -173,7 +172,7 @@ describe('buildSystemPrompt', () => {
   describe('已解锁旗标 section', () => {
     it('shows flags that are true', () => {
       const player = makePlayerState({ flags: { found_allies: true, met_king: false } })
-      const prompt = buildSystemPrompt(makeWorldCard(), player, {})
+      const prompt = buildPlannerSystemPrompt(makeWorldCard(), player, {})
 
       expect(prompt).toContain('- found_allies')
       expect(prompt).not.toContain('- met_king')
@@ -181,7 +180,7 @@ describe('buildSystemPrompt', () => {
 
     it('shows "无" when no flags are true', () => {
       const player = makePlayerState({ flags: { met_king: false } })
-      const prompt = buildSystemPrompt(makeWorldCard(), player, {})
+      const prompt = buildPlannerSystemPrompt(makeWorldCard(), player, {})
 
       expect(prompt).not.toContain('- met_king')
     })

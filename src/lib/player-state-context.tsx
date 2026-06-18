@@ -56,6 +56,16 @@ type PlayerAction =
       options: GameOption[]
       attributeDefs?: AttributeDef[]
     }
+  | { type: 'APPLY_STATE_CHANGES';
+      attributeChanges?: Record<string, number>
+      npcAffinityChanges?: Record<string, number>
+      itemsGained?: string[]
+      itemsLost?: string[]
+      newFlags?: string[]
+      lostFlags?: string[]
+      attributeDefs?: AttributeDef[]
+    }
+  | { type: 'SET_OPTIONS'; options: GameOption[] }
   | { type: 'LOAD_SAVE'; save: SaveData; worldCard: WorldCard }
   | { type: 'RETURN_TO_MENU' }
 
@@ -91,13 +101,43 @@ function playerStateReducer(state: PlayerStateData, action: PlayerAction): Playe
       const ps = state.playerState
       if (!ps) return state
 
-      const newAttrs = action.attributeChanges
-        ? clampAttributes(ps.attributes, action.attributeChanges, action.attributeDefs ?? [])
+      // 翻译 AI 可能使用的属性中文名 → key
+      let translatedAttrChanges = action.attributeChanges
+      if (translatedAttrChanges && action.attributeDefs) {
+        const nameToKey: Record<string, string> = {}
+        for (const def of action.attributeDefs) {
+          if (def.name) nameToKey[def.name] = def.key
+        }
+        const fixed: Record<string, number> = {}
+        for (const [k, v] of Object.entries(translatedAttrChanges)) {
+          const realKey = nameToKey[k] || k
+          fixed[realKey] = (fixed[realKey] || 0) + v
+        }
+        translatedAttrChanges = fixed
+      }
+
+      const newAttrs = translatedAttrChanges
+        ? clampAttributes(ps.attributes, translatedAttrChanges, action.attributeDefs ?? [])
         : ps.attributes
 
+      // 翻译 AI 可能使用的 NPC 中文名 → id
+      let translatedAffinityChanges = action.npcAffinityChanges
+      if (translatedAffinityChanges && state.worldCard) {
+        const nameToId: Record<string, string> = {}
+        for (const npc of state.worldCard.npcs) {
+          if (npc.fields.name) nameToId[npc.fields.name] = npc.id
+        }
+        const fixed: Record<string, number> = {}
+        for (const [k, v] of Object.entries(translatedAffinityChanges)) {
+          const realId = nameToId[k] || k
+          fixed[realId] = (fixed[realId] || 0) + v
+        }
+        translatedAffinityChanges = fixed
+      }
+
       const newNpcAffinities = { ...state.npcAffinities }
-      if (action.npcAffinityChanges) {
-        for (const [key, delta] of Object.entries(action.npcAffinityChanges)) {
+      if (translatedAffinityChanges) {
+        for (const [key, delta] of Object.entries(translatedAffinityChanges)) {
           if (key in newNpcAffinities) {
             newNpcAffinities[key] = Math.max(0, Math.min(newNpcAffinities[key] + delta, 100))
           }
@@ -137,6 +177,97 @@ function playerStateReducer(state: PlayerStateData, action: PlayerAction): Playe
           flags: newFlags,
         },
         npcAffinities: newNpcAffinities,
+        currentOptions: action.options,
+      }
+    }
+
+    case 'APPLY_STATE_CHANGES': {
+      const ps = state.playerState
+      if (!ps) return state
+
+      // 翻译 AI 可能使用的属性中文名 → key
+      let translatedAttrChanges = action.attributeChanges
+      if (translatedAttrChanges && action.attributeDefs) {
+        const nameToKey: Record<string, string> = {}
+        for (const def of action.attributeDefs) {
+          if (def.name) nameToKey[def.name] = def.key
+        }
+        const fixed: Record<string, number> = {}
+        for (const [k, v] of Object.entries(translatedAttrChanges)) {
+          const realKey = nameToKey[k] || k
+          fixed[realKey] = (fixed[realKey] || 0) + v
+        }
+        translatedAttrChanges = fixed
+      }
+
+      const newAttrs = translatedAttrChanges
+        ? clampAttributes(ps.attributes, translatedAttrChanges, action.attributeDefs ?? [])
+        : ps.attributes
+
+      // 翻译 AI 可能使用的 NPC 中文名 → id
+      let translatedAffinityChanges = action.npcAffinityChanges
+      if (translatedAffinityChanges && state.worldCard) {
+        const nameToId: Record<string, string> = {}
+        for (const npc of state.worldCard.npcs) {
+          if (npc.fields.name) nameToId[npc.fields.name] = npc.id
+        }
+        const fixed: Record<string, number> = {}
+        for (const [k, v] of Object.entries(translatedAffinityChanges)) {
+          const realId = nameToId[k] || k
+          fixed[realId] = (fixed[realId] || 0) + v
+        }
+        translatedAffinityChanges = fixed
+      }
+
+      const newNpcAffinities = { ...state.npcAffinities }
+      if (translatedAffinityChanges) {
+        for (const [key, delta] of Object.entries(translatedAffinityChanges)) {
+          if (key in newNpcAffinities) {
+            newNpcAffinities[key] = Math.max(0, Math.min(newNpcAffinities[key] + delta, 100))
+          }
+        }
+      }
+
+      let newInventory = [...(ps.inventory ?? [])]
+      if (action.itemsGained) {
+        for (const item of action.itemsGained) {
+          if (!newInventory.includes(item)) {
+            newInventory.push(item)
+          }
+        }
+      }
+      if (action.itemsLost) {
+        newInventory = newInventory.filter(item => !action.itemsLost!.includes(item))
+      }
+
+      const newFlags = { ...ps.flags }
+      if (action.newFlags) {
+        for (const flag of action.newFlags) {
+          newFlags[flag] = true
+        }
+      }
+      if (action.lostFlags) {
+        for (const flag of action.lostFlags) {
+          newFlags[flag] = false
+        }
+      }
+
+      return {
+        ...state,
+        playerState: {
+          ...ps,
+          attributes: newAttrs,
+          inventory: newInventory,
+          flags: newFlags,
+        },
+        npcAffinities: newNpcAffinities,
+        // 不修改 currentOptions
+      }
+    }
+
+    case 'SET_OPTIONS': {
+      return {
+        ...state,
         currentOptions: action.options,
       }
     }
@@ -192,6 +323,16 @@ interface PlayerStateContextValue {
       options: GameOption[]
       attributeDefs?: AttributeDef[]
     }) => void
+    applyStateChanges: (changes: {
+      attributeChanges?: Record<string, number>
+      npcAffinityChanges?: Record<string, number>
+      itemsGained?: string[]
+      itemsLost?: string[]
+      newFlags?: string[]
+      lostFlags?: string[]
+      attributeDefs?: AttributeDef[]
+    }) => void
+    setOptions: (options: GameOption[]) => void
     loadGame: (save: SaveData, worldCard: WorldCard) => void
     returnToMenu: () => void
   }
@@ -220,6 +361,22 @@ export function PlayerStateProvider({ children }: { children: React.ReactNode })
     dispatch({ type: 'UPDATE_STATE', ...changes })
   }, [])
 
+  const applyStateChanges = useCallback((changes: {
+    attributeChanges?: Record<string, number>
+    npcAffinityChanges?: Record<string, number>
+    itemsGained?: string[]
+    itemsLost?: string[]
+    newFlags?: string[]
+    lostFlags?: string[]
+    attributeDefs?: AttributeDef[]
+  }) => {
+    dispatch({ type: 'APPLY_STATE_CHANGES', ...changes })
+  }, [])
+
+  const setOptions = useCallback((options: GameOption[]) => {
+    dispatch({ type: 'SET_OPTIONS', options })
+  }, [])
+
   const loadGame = useCallback((save: SaveData, worldCard: WorldCard) => {
     dispatch({ type: 'LOAD_SAVE', save, worldCard })
   }, [])
@@ -232,8 +389,8 @@ export function PlayerStateProvider({ children }: { children: React.ReactNode })
   const value = useMemo(() => ({
     state,
     dispatch,
-    actions: { startGame, updateState, loadGame, returnToMenu },
-  }), [state, startGame, updateState, loadGame, returnToMenu])
+    actions: { startGame, updateState, applyStateChanges, setOptions, loadGame, returnToMenu },
+  }), [state, startGame, updateState, applyStateChanges, setOptions, loadGame, returnToMenu])
 
   return (
     <PlayerStateContext.Provider value={value}>

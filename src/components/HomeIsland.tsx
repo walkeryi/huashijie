@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGame } from '@/lib/game-context'
 import { presetWorldCards } from '@/data/world-cards'
 import { listCustomCards, deleteCustomCard } from '@/lib/custom-cards'
-import { WorldCard, SaveMeta } from '@/lib/types'
+import { WorldCard, SaveMeta, SaveData } from '@/lib/types'
 import * as saveService from '@/lib/save-service'
 
 type Screen = 'menu' | 'worlds' | 'loads'
@@ -14,27 +14,32 @@ export default function HomeIsland() {
   const router = useRouter()
   const { state, actions } = useGame()
 
-  const [mounted, setMounted] = useState(false)
   const [screen, setScreen] = useState<Screen>('menu')
   const [selectedCard, setSelectedCard] = useState<WorldCard | null>(null)
   const [playerName, setPlayerName] = useState('')
   const [customCards, setCustomCards] = useState<WorldCard[]>([])
   const saveSlots = state.saveSlots
 
-  useEffect(() => { setMounted(true) }, [])
+  // SSR 时 false、hydration 后 true（替代 mounted + useEffect 模式）
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
   const allCards = [...presetWorldCards, ...customCards]
   const worldCardNameMap: Record<string, string> = {}
   allCards.forEach(c => { worldCardNameMap[c.id] = c.name })
 
-  useEffect(() => { setCustomCards(listCustomCards()) }, [screen])
+  // 进入世界选择页时刷新自定义卡（在事件处理器中加载，而非 effect）
+  const goToWorlds = () => {
+    setCustomCards(listCustomCards())
+    setScreen('worlds')
+  }
 
   // 进入读档画面时刷新存档
   useEffect(() => {
     if (screen === 'loads') {
       actions.refreshSaves()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- actions 对象引用不稳定，仅需在 screen 变化时触发
   }, [screen])
 
   // 选中卡片时聚焦名字输入
@@ -66,12 +71,13 @@ export default function HomeIsland() {
     if (!card) return
 
     // SaveMeta 不含 playerState/dialogueHistory，在线和离线都需要加载完整存档数据
-    let fullSave: any = save
+    let fullSave: SaveData | undefined
     for (let s = 0; s <= 3; s++) {
       const loaded = await saveService.loadSave(s)
       if (loaded?.id === save.id) { fullSave = loaded; break }
     }
-    console.log('[HomeIsland] handleLoadSave → worldCard:', card.id, '| playerState:', !!fullSave.playerState, '| dialogueHistory:', fullSave.dialogueHistory?.length)
+    if (!fullSave) return
+    console.log('[HomeIsland] handleLoadSave → worldCard:', card.id, '| playerState:', !!fullSave.playerState, '| dialogueHistory:', fullSave.dialogueHistory.length)
     actions.loadGame(fullSave, card)
     router.push('/game')
   }
@@ -99,7 +105,7 @@ export default function HomeIsland() {
 
         <div className="w-full max-w-xs space-y-3">
           <button
-            onClick={() => setScreen('worlds')}
+            onClick={goToWorlds}
             className="w-full py-4 rounded-xl bg-[var(--accent)] text-[var(--bg-primary)] font-bold text-lg hover:bg-[var(--accent-hover)] transition-colors shadow-lg shadow-[var(--accent)]/20"
           >
             开始冒险 ⚔️

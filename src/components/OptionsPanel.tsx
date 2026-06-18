@@ -20,6 +20,13 @@ function evalCondition(val: number, condition: string): boolean {
   }
 }
 
+/** 归一化条件值：数字 → `>= N`，字符串保持原样，对象跳过 */
+function normalizeCondition(condition: unknown): string | null {
+  if (typeof condition === 'string') return condition
+  if (typeof condition === 'number') return `>= ${condition}`
+  return null // 跳过无法识别的条件
+}
+
 function checkOption(option: GameOption, state: GameState): boolean {
   const attrs = state.playerState?.attributes ?? {}
   const npcAffs = state.npcAffinities ?? {}
@@ -29,45 +36,52 @@ function checkOption(option: GameOption, state: GameState): boolean {
   // attributeChecks
   if (option.attributeChecks) {
     for (const [key, condition] of Object.entries(option.attributeChecks)) {
+      const normalized = normalizeCondition(condition)
+      if (normalized === null) continue
       const val = attrs[key] ?? 0
-      if (!evalCondition(val, condition)) return false
+      if (!evalCondition(val, normalized)) return false
     }
   }
 
   // npcAffinityChecks
   if (option.npcAffinityChecks) {
     for (const [key, condition] of Object.entries(option.npcAffinityChecks)) {
+      const normalized = normalizeCondition(condition)
+      if (normalized === null) continue
       const val = npcAffs[key] ?? 0
-      if (!evalCondition(val, condition)) return false
+      if (!evalCondition(val, normalized)) return false
     }
+  }
+
+  // 归一化：DeepSeek 可能输出数组 [...] 或对象 {"xxx": true}
+  const toArray = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v as string[]
+    if (typeof v === 'object' && v !== null) {
+      return Object.entries(v as Record<string, unknown>)
+        .filter(([, val]) => val === true || val === 1)
+        .map(([key]) => key)
+    }
+    return []
   }
 
   // flagChecks — all must be true
-  if (option.flagChecks) {
-    for (const flag of option.flagChecks) {
-      if (!flags[flag]) return false
-    }
+  for (const flag of toArray(option.flagChecks)) {
+    if (!flags[flag]) return false
   }
 
   // flagNot — none can be true
-  if (option.flagNot) {
-    for (const flag of option.flagNot) {
-      if (flags[flag]) return false
-    }
+  for (const flag of toArray(option.flagNot)) {
+    if (flags[flag]) return false
   }
 
   // itemChecks — all must be in inventory
-  if (option.itemChecks) {
-    for (const item of option.itemChecks) {
-      if (!inventory.includes(item)) return false
-    }
+  for (const item of toArray(option.itemChecks)) {
+    if (!inventory.includes(item)) return false
   }
 
   // itemNot — none can be in inventory
-  if (option.itemNot) {
-    for (const item of option.itemNot) {
-      if (inventory.includes(item)) return false
-    }
+  for (const item of toArray(option.itemNot)) {
+    if (inventory.includes(item)) return false
   }
 
   return true
@@ -79,7 +93,7 @@ interface OptionsPanelProps {
 
 export default function OptionsPanel({ onSubmit }: OptionsPanelProps) {
   const { state } = useGame()
-  const { currentOptions, isLoading, playerState } = state
+  const { currentOptions, isLoading } = state
 
   const [freeInput, setFreeInput] = useState('')
   const [visible, setVisible] = useState(false)

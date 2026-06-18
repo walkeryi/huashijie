@@ -25,7 +25,7 @@ export default function GameToolbar() {
     })
   )
   const [loadingSlots, setLoadingSlots] = useState(false)
-  const [isSaving, startSaveTransition] = useTransition()
+  const [, startSaveTransition] = useTransition()
 
   // ---- 加载 UI ----
   const [showLoadUI, setShowLoadUI] = useState(false)
@@ -33,7 +33,6 @@ export default function GameToolbar() {
   // 展开时加载槽位信息
   useEffect(() => {
     if (showSaveUI || showLoadUI) {
-      setLoadingSlots(true)
       const loadSlots = async () => {
         const infos: Record<number, { slotName: string; timestamp: number } | null> = {}
         for (const slot of [1, 2, 3]) {
@@ -101,7 +100,7 @@ export default function GameToolbar() {
     <div className="border-b border-[var(--border)] bg-[var(--bg-primary)] px-4 py-2 flex items-center gap-3 relative">
       {/* 存档按钮 */}
       <button
-        onClick={() => { setShowSaveUI(!showSaveUI); setShowLoadUI(false) }}
+        onClick={() => { const opening = !showSaveUI; setShowSaveUI(opening); setShowLoadUI(false); if (opening) setLoadingSlots(true) }}
         className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] text-sm hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
       >
         {saveIcon} 存档
@@ -109,7 +108,7 @@ export default function GameToolbar() {
 
       {/* 加载按钮 */}
       <button
-        onClick={() => { setShowLoadUI(!showLoadUI); setShowSaveUI(false) }}
+        onClick={() => { const opening = !showLoadUI; setShowLoadUI(opening); setShowSaveUI(false); if (opening) setLoadingSlots(true) }}
         className="px-3 py-1.5 rounded-lg border border-[var(--border)] text-[var(--text-primary)] text-sm hover:bg-[var(--bg-card)] transition-colors cursor-pointer"
       >
         📂 加载

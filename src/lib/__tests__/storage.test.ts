@@ -13,7 +13,6 @@ function makePlayerState(overrides?: Partial<PlayerState>): PlayerState {
 }
 
 const TEST_API_KEY = 'test-key-123'
-const EMPTY_RECORD: Record<string, never> = {}
 
 function makeDialogueHistory(): DialogueEntry[] {
   return [
@@ -154,6 +153,7 @@ describe('storage', () => {
       worldCardId: 'w',
       playerState: makePlayerState(),
       dialogueHistory: makeDialogueHistory(),
+      memoryFacts: [],
       apiKey: TEST_API_KEY,
       npcAffinities: {},
       npcRuntime: {},
@@ -173,6 +173,7 @@ describe('storage', () => {
       worldCardId: 'w',
       playerState: makePlayerState(),
       dialogueHistory: [],
+      memoryFacts: [],
       apiKey: TEST_API_KEY,
       npcAffinities: {},
       npcRuntime: {},

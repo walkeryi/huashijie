@@ -58,7 +58,6 @@ function migratePollutedApiConfigs(): void {
       if (k.length > 0) nonEmpty.push({ p, key: k })
     }
     if (nonEmpty.length >= 2 && nonEmpty.every(e => e.key === nonEmpty[0].key)) {
-      console.log('[迁移] 检测到 apiKey 污染，清理中...')
       const last = loadLastProvider()
       for (const p of providers) {
         if (p !== last && configs[p]) {
@@ -66,7 +65,6 @@ function migratePollutedApiConfigs(): void {
         }
       }
       saveAllApiConfigs(configs)
-      console.log('[迁移] 完成，仅保留', last, '的 apiKey')
     }
   } catch {}
 }
@@ -162,13 +160,16 @@ const AppConfigContext = createContext<AppConfigContextValue | null>(null)
 export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppConfigState>(createInitialAppConfig)
 
-  // 启动时从 localStorage 恢复 API 配置（覆盖 SSR 产生的空值）
+  // 启动时从 localStorage 恢复 API 配置（覆盖 SSR 产生的空值）。
+  // SSR 阶段无法访问 localStorage，且 hydration 时 useState initializer 不会重新执行（复用 SSR 的空配置），
+  // 故必须在 mount effect 中读取并同步到 state。该场景不适合 useSyncExternalStore——
+  // 配置既从 localStorage 读初始值，又由 UI 内部 setState 改变，是混合 store。
   useEffect(() => {
     if (typeof window === 'undefined') return
     const provider = loadLastProvider()
     const saved = loadApiConfigForProvider(provider)
-    console.log('[API] 启动加载:', provider, saved.apiKey ? 'key=' + saved.apiKey.slice(0, 12) + '...' : '无key')
     if (saved.apiKey) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR→client localStorage 配置恢复的必要副作用
       setState(prev => ({
         ...prev,
         provider,
@@ -188,8 +189,7 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!state.provider || !['anthropic', 'openai', 'deepseek', 'custom'].includes(state.provider)) return
-    if (!apiInitRef.current) { apiInitRef.current = true; console.log('[API] 跳过首次渲染'); return }
-    console.log('[API] 自动保存:', state.provider, state.apiKey.slice(0, 12) + '...')
+    if (!apiInitRef.current) { apiInitRef.current = true; return }
     const configs = loadAllApiConfigs()
     delete configs['undefined']; delete configs['null']
     configs[state.provider] = {

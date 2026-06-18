@@ -1,6 +1,6 @@
 ---
 name: state-management
-description: 三层 Context 架构（AppConfigContext / PlayerStateContext / GamePlayContext）、拆分原因和消费者关系、UPDATE_STATE reducer 的 optional 字段守卫模式、向后兼容的 useGame() 和 GameProvider、debouncedAutoSave 防抖逻辑、AppConfigContext 的 localStorage 持久化与历史数据迁移
+description: 三层 Context 架构（AppConfigContext / PlayerStateContext / GamePlayContext）、拆分原因和消费者关系、PlayerState reducer 的六种 action（APPLY_STATE_CHANGES / SET_OPTIONS / UPDATE_STATE 等）和 optional 字段守卫模式、向后兼容的 useGame() 和 GameProvider、debouncedAutoSave 防抖逻辑、AppConfigContext 的 localStorage 持久化与历史数据迁移
 ---
 
 # 状态管理
@@ -111,18 +111,28 @@ const archiveDialogue = useCallback((history: DialogueEntry[]) => {
 
 ## PlayerState Reducer 详解
 
-`src/lib/player-state-context.tsx` 包含一个 `useReducer` 实现，支持四种 action：
+`src/lib/player-state-context.tsx` 包含一个 `useReducer` 实现，支持六种 action：
 
 | Action | 触发时机 | 关键逻辑 |
 |--------|---------|---------|
-| `START_GAME` | 选择世界、输入姓名后 | 初始化属性值（从 worldCard.attributes 读取 initial）、NPC 好感度 |
-| `UPDATE_STATE` | AI 调用 update_state 工具后 | 更新属性、好感度、物品、旗标、选项 |
+| `START_GAME` | 选择世界、输入姓名后 | 初始化属性值、NPC 好感度 |
+| `APPLY_STATE_CHANGES` | Stage 1（Plan）完成后 | 更新属性、好感度、物品、旗标，**不修改** currentOptions |
+| `SET_OPTIONS` | Stage 3（Choices）完成后 | 仅设置 currentOptions |
+| `UPDATE_STATE` | 向后兼容（旧代码路径） | 同时更新属性+选项，三阶段管线中已不用于主流程 |
 | `LOAD_SAVE` | 读档时 | 恢复完整 game state |
 | `RETURN_TO_MENU` | 回到主菜单 | 重置为初始状态 |
 
+### 三阶段管线中的使用
+
+三阶段管线分别使用不同的 action，确保 Plan（状态变更）和 Choices（选项生成）的副作用彼此隔离：
+
+1. **Stage 1（Plan）完成后** → `actions.applyStateChanges()` dispatch `APPLY_STATE_CHANGES`，仅更新属性/NPC好感度/物品/旗标，不触碰 currentOptions
+2. **Stage 3（Choices）完成后** → `actions.setOptions()` dispatch `SET_OPTIONS`，仅设置 currentOptions
+3. **Stage 2（Narrate）** 用本地计算的 `computeUpdatedPlayerState()` 构造更新后的 playerState 传给服务端（避免依赖 React 异步 dispatch 的时序）
+
 ### UPDATE_STATE 的 Optional 字段守卫（极重要）
 
-AI 的 `update_state` tool call 只保证 `options` 字段必填，其他字段全部 optional。**reducer 中每个字段都有 `if` 守卫**，防止 `Object.entries(undefined)` 崩溃：
+AI 的 `UPDATE_STATE` / `APPLY_STATE_CHANGES` action 只保证核心字段有默认行为，所有可选字段。**reducer 中每个字段都有 `if` 守卫**，防止 `Object.entries(undefined)` 崩溃：
 
 ```ts
 // ✅ 正确
@@ -151,7 +161,7 @@ const newAttrs = clampAttributes(ps.attributes, action.attributeChanges, action.
 
 ## 相关文档
 → save-system.md：存档数据的 LOAD_SAVE dispatch 目标，debouncedAutoSave 的触发时机
-→ game-options-conditions.md：currentOptions 的存储和 UPDATE_STATE 更新
+→ game-options-conditions.md：currentOptions 的存储和 SET_OPTIONS 更新
 → ai-engine.md：provider/model/apiKey 的存储位置
 → event-bus-typewriter.md：dialogueHistory 与打字机的关系
 → world-card-system.md：START_GAME 的初始化逻辑

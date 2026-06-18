@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { WorldCard, AttributeDef, NPCDef, StoryBeat, PRESET_NPC_FIELDS } from '@/lib/types'
+import { WorldCard, AttributeDef, NPCDef, NPCFields, StoryBeat, PRESET_NPC_FIELDS } from '@/lib/types'
 import { createEmptyCard, saveCustomCard } from '@/lib/custom-cards'
 import AccountButton from './AccountButton'
 import SystemSettings from './SystemSettings'
@@ -185,7 +185,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
   const ensureMainExists = () => {
     if (mainChar) return
     const id = 'npc_main_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {} }
+    const fields: NPCFields = { id, _customMeta: {} }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -200,7 +200,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
 
   const addSideCharacter = () => {
     const id = 'npc_side_' + Date.now()
-    const fields: Record<string, any> = { id, _customMeta: {} }
+    const fields: NPCFields = { id, _customMeta: {} }
     PRESET_NPC_FIELDS.forEach(f => {
       if (f.key === 'id' || f.key === 'isMainCharacter') return
       if (f.type === 'number') fields[f.key] = f.key === 'initialAffinity' ? 0 : null
@@ -217,7 +217,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     update({ npcs: card.npcs.filter(n => n.id !== npcId) })
   }
 
-  const updateField = (npcId: string, fieldKey: string, value: any) => {
+  const updateField = (npcId: string, fieldKey: string, value: unknown) => {
     update({
       npcs: card.npcs.map(n =>
         n.id === npcId ? { ...n, fields: { ...n.fields, [fieldKey]: value } } : n
@@ -276,7 +276,8 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     const showDelete = !core
 
     const nameLabel = preset?.label ?? fieldKey
-    const descHint = preset?.desc ?? (npc.fields._customMeta?.[fieldKey]?.desc ?? '')
+    const customMeta = npc.fields._customMeta?.[fieldKey] as { desc?: string } | undefined
+    const descHint = preset?.desc ?? (customMeta?.desc ?? '')
 
     const catBadge = core ? '🔒' : '✨'
     const catClass = core ? 'text-[var(--text-secondary)]' : 'text-green-400'
@@ -286,7 +287,7 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
     const valueInput = type === 'boolean' ? (
       <input type="checkbox" checked={!!value} onChange={e => updateField(npc.id, fieldKey, e.target.checked)} className="rounded ml-2" />
     ) : type === 'number' ? (
-      <input type="number" value={value ?? 0} onChange={e => updateField(npc.id, fieldKey, Number(e.target.value))}
+      <input type="number" value={(value as number | null | undefined) ?? 0} onChange={e => updateField(npc.id, fieldKey, Number(e.target.value))}
         className={`w-20 ${sharedInputClass} text-center`}
         {...(fieldKey === 'initialAffinity' ? { min: -100, max: 100 } : {})} />
     ) : type === 'string[]' ? (
@@ -294,10 +295,10 @@ function CharacterTab({ card, update }: { card: WorldCard; update: (p: Partial<W
         onChange={e => updateField(npc.id, fieldKey, e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean))}
         placeholder="逗号分隔" className={`flex-1 ${sharedInputClass}`} />
     ) : fieldKey === 'dialogueExamples' ? (
-      <textarea value={value ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)} rows={2}
+      <textarea value={(value as string | null | undefined) ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)} rows={2}
         placeholder={preset?.desc ?? ''} className={`flex-1 ${sharedInputClass} resize-y text-xs`} />
     ) : (
-      <input value={value ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)}
+      <input value={(value as string | null | undefined) ?? ''} onChange={e => updateField(npc.id, fieldKey, e.target.value)}
         placeholder={descHint || undefined} className={`flex-1 ${sharedInputClass}`} />
     )
 

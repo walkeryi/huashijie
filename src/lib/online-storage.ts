@@ -81,7 +81,7 @@ export async function onlineCheckConnection(): Promise<boolean> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: '__ping__', password: '__ping__' }),
     })
-    const data = await res.json()
+    await res.json()
     // 只要能连上服务器就算成功（即使登录失败）
     return true
   } catch {

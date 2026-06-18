@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useGame, loadApiConfigForProvider } from '@/lib/game-context'
 import { themes, loadTheme, saveTheme, setTheme, loadFontSize, saveFontSize, applyFontSize, FontSize } from '@/lib/theme'
 import { ModelIcon } from '@lobehub/icons'
@@ -116,21 +116,6 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<TabType>('theme')
 
-  // 持续监控 apiKey
-  const keyRef = useRef(state.apiKey)
-  useEffect(() => {
-    const old = keyRef.current
-    const now = state.apiKey
-    if (old !== now) {
-      console.log('[监控] apiKey变化 长度:', now.length, '内容:', now.slice(0,20)+(now.length>20?'...':''), 'provider:', state.provider)
-      keyRef.current = now
-    }
-  })
-  // 监控 open 状态
-  useEffect(() => {
-    console.log('[监控] 设置面板:', open ? '打开了' : '关闭了', '当前apiKey:', state.apiKey.slice(0,20)+(state.apiKey.length>20?'...':''))
-  }, [open])
-
   // API
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle')
   const [testMessage, setTestMessage] = useState('')
@@ -185,13 +170,6 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
     setTestStatus('testing'); setTestMessage('')
 
     const payload = { apiKey: state.apiKey, provider: state.provider, model: state.model, customBaseURL: state.customBaseURL }
-    console.log('[test-connection 前端] 发送请求:', {
-      provider: payload.provider,
-      model: payload.model,
-      customBaseURL: payload.customBaseURL || '(无)',
-      apiKeyLen: payload.apiKey?.length,
-      apiKeyPrefix: payload.apiKey?.slice(0, 10),
-    })
 
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 10000)
@@ -202,9 +180,7 @@ export default function SystemSettings({ inline }: { inline?: boolean }) {
         signal: controller.signal,
       })
       clearTimeout(timer)
-      console.log('[test-connection 前端] 响应状态:', res.status, res.statusText)
       const data = await res.json()
-      console.log('[test-connection 前端] 响应数据:', data)
       if (data.ok) { setTestStatus('ok'); setTestMessage(`连接成功 · ${data.latency}ms`) }
       else { setTestStatus('fail'); setTestMessage(data.error || '连接失败') }
     } catch (e: unknown) {

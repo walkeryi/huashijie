@@ -5,7 +5,6 @@ import {
   clampAffinity,
   getAffinityTier,
   getAffinityLabel,
-  AffinityTier,
   applyAffinityChanges,
   parseAffinityCondition,
   checkAffinityCondition,

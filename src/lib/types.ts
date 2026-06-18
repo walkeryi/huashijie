@@ -59,10 +59,28 @@ export interface CustomFieldMeta {
   desc: string
 }
 
+export interface NPCFields {
+  id?: string
+  name?: string
+  isMainCharacter?: boolean
+  gender?: string | null
+  origin?: string | null
+  birthday?: string | null
+  dialogueTone?: string | null
+  dialogueExamples?: string | null
+  personalityTags?: string[] | null
+  appearance?: string | null
+  currentAttire?: string | null
+  initialAffinity?: number | null
+  _customMeta?: Record<string, unknown>
+  // 自定义字段索引签名：WorldCreator 动态写入未知字段
+  [key: string]: unknown
+}
+
 export interface NPCDef {
   id: string
   isMainCharacter: boolean
-  fields: Record<string, any>
+  fields: NPCFields
 }
 
 // 运行时动态状态 — 从静态定义中剥离，防止存档污染
@@ -147,6 +165,7 @@ export interface SaveData {
   worldCardId: string
   playerState: PlayerState
   dialogueHistory: DialogueEntry[]
+  memoryFacts: string[]
   apiKey: string
   npcAffinities: Record<string, number>
   npcRuntime: Record<string, RuntimeNPCState>
@@ -161,11 +180,12 @@ export interface GameState {
   worldCard: WorldCard | null
   playerState: PlayerState | null
   dialogueHistory: DialogueEntry[]
+  memoryFacts: string[]
   currentOptions: GameOption[]
   currentNarration: string
   isLoading: boolean
   error: string | null
-  saveSlots: SaveData[]
+  saveSlots: SaveMeta[]
   apiKey: string
   provider: 'anthropic' | 'openai' | 'deepseek' | 'custom'
   model: string

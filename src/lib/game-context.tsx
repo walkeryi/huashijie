@@ -4,11 +4,41 @@
 'use client'
 
 import React, { type ReactNode, useCallback, useState, useMemo } from 'react'
-import { AppConfigProvider, useAppConfig, loadApiConfigForProvider } from './app-config-context'
+import { AppConfigProvider, useAppConfig } from './app-config-context'
 import { PlayerStateProvider, usePlayerState } from './player-state-context'
 import { GamePlayProvider, useGamePlay } from './game-play-context'
-import type { AdvancedParams, SaveData, SaveMeta } from './types'
+import type { AdvancedParams, SaveData, SaveMeta, WorldCard, PresetProvider, Protocol } from './types'
 import * as saveService from './save-service'
+
+type Provider = 'anthropic' | 'openai' | 'deepseek' | 'custom'
+
+/** 向后兼容的 dispatch action 联合类型（旧 reducer 模式遗留接口） */
+type LegacyGameAction =
+  | { type: 'SET_API_KEY'; apiKey: string }
+  | { type: 'SET_PROVIDER'; provider: Provider }
+  | { type: 'SET_MODEL'; model: string }
+  | { type: 'SET_CUSTOM_BASE_URL'; baseURL: string }
+  | { type: 'SET_PROTOCOL'; protocol: Protocol }
+  | { type: 'SET_PROVIDER_NAME'; name: string }
+  | { type: 'SET_API_BASE_URL'; url: string }
+  | { type: 'SET_ADVANCED_PARAMS'; params: Partial<AdvancedParams> }
+  | { type: 'SET_SAVE_MODE'; mode: 'offline' | 'online'; accountName: string }
+  | {
+      type: 'APPLY_PRESET'
+      preset: PresetProvider
+      providerName?: string
+      apiKey?: string
+      model?: string
+      apiBaseURL?: string
+      customBaseURL?: string
+      protocol?: Protocol
+      advancedParams?: AdvancedParams
+    }
+  | { type: 'START_GAME'; worldCard: WorldCard; playerName: string }
+  | { type: 'LOAD_SAVE'; save: SaveData; worldCard: WorldCard }
+  | { type: 'RETURN_TO_MENU' }
+  | { type: 'SET_LOADING'; isLoading: boolean }
+  | { type: 'SET_ERROR'; error: string | null }
 
 // 向后兼容：合并三个 Context 为旧 GameContextValue 形状
 export function useGame() {
@@ -22,13 +52,14 @@ export function useGame() {
     worldCard: playerState.state.worldCard,
     playerState: playerState.state.playerState,
     dialogueHistory: gamePlay.state.dialogueHistory,
+    memoryFacts: gamePlay.state.memoryFacts,
     currentOptions: playerState.state.currentOptions,
     currentNarration: '',
     isLoading: gamePlay.state.isLoading,
     error: gamePlay.state.error,
     saveSlots,
     apiKey: appConfig.state.apiKey,
-    provider: appConfig.state.provider as any,
+    provider: appConfig.state.provider,
     model: appConfig.state.model,
     customBaseURL: appConfig.state.customBaseURL,
     protocol: appConfig.state.protocol,
@@ -42,7 +73,7 @@ export function useGame() {
   }), [playerState.state, gamePlay.state, appConfig.state, saveSlots])
 
   // 向后兼容的 dispatch — 将旧 action 转发到对应的 setter/reducer
-  const dispatch = useCallback((action: any) => {
+  const dispatch = useCallback((action: LegacyGameAction) => {
     switch (action.type) {
       // ---- AppConfig actions ----
       case 'SET_API_KEY':
@@ -77,7 +108,6 @@ export function useGame() {
         const defaultAdv: AdvancedParams = preset.protocol === 'anthropic'
           ? { max_tokens: 4096, temperature: 0.7, top_p: 1, top_k: 40 }
           : { temperature: 0.7, max_tokens: 4096, top_p: 1 }
-        console.log('[dispatch] APPLY_PRESET:', preset.id, 'apiKey传入:', (action.apiKey || '(空)').slice(0, 20))
         appConfig.setAll({
           provider: preset.provider,
           providerName: action.providerName ?? preset.name,
@@ -104,6 +134,10 @@ export function useGame() {
         } else {
           gamePlay.resetGamePlay()
         }
+        // 恢复记忆槽
+        if (action.save.memoryFacts?.length) {
+          gamePlay.updateMemoryFacts(action.save.memoryFacts)
+        }
         break
       case 'RETURN_TO_MENU':
         console.log('[dispatch] RETURN_TO_MENU')
@@ -115,7 +149,7 @@ export function useGame() {
         gamePlay.setLoading(action.isLoading)
         break
       case 'SET_ERROR':
-        gamePlay.setError(action.error)
+        gamePlay.setError(action.error ?? '')
         break
       default:
         // 未识别的 action 静默忽略（如 SET_RESPONSE / REFRESH_SAVES / APPEND_NARRATION / INIT_NPC_AFFINITIES）
@@ -135,18 +169,24 @@ export function useGame() {
     setAdvancedParams: appConfig.setAdvancedParams,
     setSaveMode: appConfig.setSaveMode,
     // PlayerState actions — 包装以同时重置 GamePlay 对话历史
-    startGame: (worldCard: any, playerName: string) => {
+    startGame: (worldCard: WorldCard, playerName: string) => {
       playerState.actions.startGame(worldCard, playerName)
       gamePlay.resetGamePlay()
     },
     updateState: playerState.actions.updateState,
-    loadGame: (save: any, worldCard: any) => {
+    applyStateChanges: playerState.actions.applyStateChanges,
+    setOptions: playerState.actions.setOptions,
+    loadGame: (save: SaveData, worldCard: WorldCard) => {
       playerState.actions.loadGame(save, worldCard)
       // 从存档恢复对话历史，不重置
       if (save.dialogueHistory?.length) {
         gamePlay.archiveDialogue(save.dialogueHistory)
       } else {
         gamePlay.resetGamePlay()
+      }
+      // 恢复记忆槽
+      if (save.memoryFacts?.length) {
+        gamePlay.updateMemoryFacts(save.memoryFacts)
       }
     },
     returnToMenu: () => {
@@ -157,6 +197,8 @@ export function useGame() {
     setLoading: gamePlay.setLoading,
     setError: gamePlay.setError,
     archiveDialogue: gamePlay.archiveDialogue,
+    appendToDialogue: gamePlay.appendToDialogue,
+    updateMemoryFacts: gamePlay.updateMemoryFacts,
     clearError: gamePlay.clearError,
     // 存档操作 — 委托给 saveService
     saveGame: async (slot: number, slotName: string) => {
@@ -167,6 +209,7 @@ export function useGame() {
         worldCardId: playerState.state.worldCard?.id || '',
         playerState: playerState.state.playerState!,
         dialogueHistory: gamePlay.state.dialogueHistory,
+        memoryFacts: gamePlay.state.memoryFacts,
         apiKey: appConfig.state.apiKey,
         npcAffinities: playerState.state.npcAffinities,
         npcRuntime: playerState.state.npcRuntime,
@@ -194,9 +237,9 @@ export function useGame() {
       const metas = await saveService.listSaveMetas()
       setSaveSlots(metas)
     },
-  }), [appConfig, playerState, gamePlay, saveSlots])
+  }), [appConfig, playerState, gamePlay])
 
-  return { state, dispatch, actions } as any
+  return { state, dispatch, actions }
 }
 
 // 统一 Provider — 嵌套三个 Context

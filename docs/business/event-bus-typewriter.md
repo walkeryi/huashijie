@@ -1,6 +1,6 @@
 ---
 name: event-bus-typewriter
-description: sharedEventBus 模块级单例（GameScreen 写入、DialogueBox 读取的契约）、RAF 驱动的逐字打字动画（buffer + charIndex + requestAnimationFrame）、客户端 SSE 解析器（readDataStream 本地实现）、AbortController 生命周期、降级兜底（AI 未调用 tool 时注入默认选项）
+description: sharedEventBus 模块级单例（GameScreen 写入、DialogueBox 读取的契约）、RAF 驱动的逐字打字动画（buffer + charIndex + requestAnimationFrame）、客户端 SSE 解析器（readDataStream 本地实现）、AbortController 生命周期、三阶段管线降级（Plan/Choices 各自服务端降级、客户端默认选项兜底）
 ---
 
 # 打字机效果与 EventBus
@@ -55,6 +55,7 @@ async function* readDataStream(
   let buffer = ''
   try {
     while (true) {
+      if (signal?.aborted) { reader.releaseLock(); return }
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
@@ -81,36 +82,39 @@ async function* readDataStream(
 3. **`[DONE]` 终止标记**：当遇到 `data: [DONE]` 时立即 `return`，结束生成器循环
 4. **无效 JSON 静默跳过**：`try { yield JSON.parse(data) } catch {}` 保证非 JSON 行不中断流
 5. **AsyncGenerator 函数签名**：`async function*` 返回 `AsyncGenerator`，调用方使用 `for await (const part of reader)` 消费
+6. **AbortController 守卫**：每轮读取开始前检查 `signal?.aborted`，若上一轮请求已中止则立即释放 reader 并退出
 
-### 两次事件消费
+### Stage 2 Narrate SSE 消费
 
-`GameScreen` 主循环中两个独立的 `if` 分支按顺序处理事件：
+三阶段管线中，仅 **Stage 2（Narrate）** 使用 SSE 流。`GameScreen` 的 `submitAction` 在 Stage 2 消费流，仅处理 `text-delta` 事件：
 
 ```ts
+// Stage 2: Narrate（流式）
+const reader = readDataStream(narrateRes.body, { signal: controller.signal })
+let fullNarration = ''
 for await (const part of reader) {
-  // 第一次消费: text-delta → 打字机
   if (part.type === 'text-delta') {
     fullNarration += part.delta as string
     sharedEventBus.append(part.delta as string)
-  }
-  // 第二次消费: tool-input-available → 状态更新
-  else if (part.type === 'tool-input-available' && part.toolName === 'update_state') {
-    toolCallOccurred = true
-    actions.updateState(part.input as Record<string, unknown>)
-  }
-  else if (part.type && part.type !== 'text-delta') {
-    console.log('[GameScreen] SSE 其他事件:', part.type)
   }
 }
 ```
 
 - **`text-delta`**：AI 叙述文本，每次追加到 `fullNarration` 缓存并通过 `sharedEventBus.append()` 推送给打字机
-- **`tool-input-available` (update_state)**：AI 工具调用，解析 `part.input` 后调用 `actions.updateState()` 更新 PlayerStateContext（options、属性变化等）
-- **流控制事件**（`start` / `start-step` / `reasoning-*` / `text-start` / `text-end` / `finish-step` / `finish`）：仅日志记录，不做业务处理
+- **不再有** `tool-input-available` 事件——状态变更在 Stage 1（Plan）通过 `generateText + Output.json()` 已提前确定，选项在 Stage 3（Choices）并行获取
 
-### 降级兜底
+### 降级兜底（三阶段管线）
 
-如果 AI 没有调用 `update_state`（`toolCallOccurred === false`），注入三个默认选项：继续前进、仔细观察周围、与附近的人交谈。同时记录 console.warn。
+每个阶段的降级各自独立在服务端处理，客户端感知为统一兜底：
+
+| 阶段 | 失败场景 | 降级方式 |
+|------|---------|---------|
+| Stage 1（Plan） | AI 无法输出有效 JSON | 服务端返回 `{}`（本轮无状态变化），不阻塞后续阶段 |
+| Stage 2（Narrate） | 流式请求失败或响应为空 | 客户端显示错误提示，用户可重试 |
+| Stage 3（Choices） | AI 无法输出有效选项 JSON | 服务端注入默认选项 `["继续前进", "仔细观察周围", "与附近的人交谈"]` |
+| Stage 3（Choices） | fetch 本身失败（网络等） | 客户端注入同样的默认选项 |
+
+与旧架构不同：不再需要 fallback 端点、不再需要 tool call 监控、不再需要 `tool_call_metrics` 记录。`generateText + Output.json()` 在 Provider 层面强制 JSON 输出，从根本上消除了"AI 跳过工具调用"的问题。
 
 ## DialogueBox RAF 打字机
 
@@ -182,7 +186,7 @@ const submitAction = useCallback(async (optionText: string) => {
   const controller = new AbortController()
   abortRef.current = controller
 
-  // ... fetch('/api/adventure', { signal: controller.signal })
+  // ... 三阶段管线共享此 controller，各 fetch 传入 signal: controller.signal
 }, [state, actions])
 ```
 
@@ -203,7 +207,7 @@ const submitAction = useCallback(async (optionText: string) => {
 
 ## 相关文档
 → state-management.md：GameScreen/DialogueBox 通过 useGame() 消费三层 Context 数据
-→ game-options-conditions.md：SSE 流结束后 tool-input-available 携带 options，800ms 后 OptionsPanel 显示
+→ game-options-conditions.md：Stage 3（Choices）生成 options，800ms 后 OptionsPanel 显示
 → save-system.md：对话归档后触发防抖自动存档
 
 ## 边界

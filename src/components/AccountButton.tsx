@@ -1,28 +1,28 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useSyncExternalStore } from 'react'
 import { useGame } from '@/lib/game-context'
 import * as saveService from '@/lib/save-service'
 import { onlineRegister, onlineLogin } from '@/lib/online-storage'
 
 export default function AccountButton({ inline }: { inline?: boolean }) {
   const { state, actions } = useGame()
-  const [mounted, setMounted] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
   const [accountName, setAccountName] = useState('')
   const [password, setPassword] = useState('')
   const [status, setStatus] = useState('')
   const isLoggedIn = saveService.isOnline() && !!saveService.getAccountName()
 
-  useEffect(() => { setMounted(true) }, [])
+  // SSR 时 false、hydration 后 true，避免 hydration mismatch（替代 mounted + useEffect 模式）
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false)
 
-  useEffect(() => {
-    if (showPanel) {
-      setAccountName('')
-      setPassword('')
-      setStatus('')
-    }
-  }, [showPanel])
+  // 打开面板时重置表单（在事件处理器中重置，而非 effect）
+  const openPanel = () => {
+    setAccountName('')
+    setPassword('')
+    setStatus('')
+    setShowPanel(true)
+  }
 
   const handleRegister = async () => {
     if (!accountName.trim() || !password) { setStatus('请填写账户名和密码'); return }
@@ -34,7 +34,7 @@ export default function AccountButton({ inline }: { inline?: boolean }) {
       actions.setSaveMode('online', accountName.trim())
       setStatus('✅ 注册成功')
       setTimeout(() => setShowPanel(false), 800)
-    } catch (e: any) { setStatus('❌ ' + (e.message || '注册失败')) }
+    } catch (e: unknown) { setStatus('❌ ' + (e instanceof Error ? e.message : '注册失败')) }
   }
 
   const handleLogin = async () => {
@@ -47,7 +47,7 @@ export default function AccountButton({ inline }: { inline?: boolean }) {
       actions.setSaveMode('online', accountName.trim())
       setStatus('✅ 登录成功')
       setTimeout(() => setShowPanel(false), 800)
-    } catch (e: any) { setStatus('❌ ' + (e.message || '登录失败')) }
+    } catch (e: unknown) { setStatus('❌ ' + (e instanceof Error ? e.message : '登录失败')) }
   }
 
   const handleLogout = () => {
@@ -60,7 +60,7 @@ export default function AccountButton({ inline }: { inline?: boolean }) {
   return (
     <>
       <button
-        onClick={() => setShowPanel(true)}
+        onClick={openPanel}
         className={inline
           ? 'h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]'
           : 'fixed top-4 right-16 z-50 h-10 px-4 flex items-center gap-2 rounded-xl bg-[var(--bg-card)] border border-[var(--border)] hover:border-[var(--accent)] transition-colors text-sm text-[var(--text-primary)]'

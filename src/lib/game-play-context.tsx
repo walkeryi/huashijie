@@ -7,6 +7,7 @@ import { type DialogueEntry } from './types'
 
 export interface GamePlayState {
   dialogueHistory: DialogueEntry[]
+  memoryFacts: string[]
   isLoading: boolean
   error: string | null
 }
@@ -14,6 +15,7 @@ export interface GamePlayState {
 function createInitialGamePlayState(): GamePlayState {
   return {
     dialogueHistory: [],
+    memoryFacts: [],
     isLoading: false,
     error: null,
   }
@@ -26,6 +28,8 @@ interface GamePlayContextValue {
   setLoading: (loading: boolean) => void
   setError: (error: string) => void
   archiveDialogue: (history: DialogueEntry[]) => void
+  appendToDialogue: (entry: DialogueEntry) => void
+  updateMemoryFacts: (facts: string[]) => void
   clearError: () => void
   resetGamePlay: () => void
 }
@@ -48,12 +52,20 @@ export function GamePlayProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, dialogueHistory: history, isLoading: false }))
   }, [])
 
+  const appendToDialogue = useCallback((entry: DialogueEntry) => {
+    setState(prev => ({ ...prev, dialogueHistory: [...prev.dialogueHistory, entry] }))
+  }, [])
+
   const clearError = useCallback(() => {
     setState(prev => ({ ...prev, error: null }))
   }, [])
 
+  const updateMemoryFacts = useCallback((facts: string[]) => {
+    setState(prev => ({ ...prev, memoryFacts: facts }))
+  }, [])
+
   const resetGamePlay = useCallback(() => {
-    console.log('[GamePlay] resetGamePlay → 清空对话历史')
+    console.log('[GamePlay] resetGamePlay → 清空对话历史和记忆槽')
     setState(createInitialGamePlayState())
   }, [])
 
@@ -62,9 +74,11 @@ export function GamePlayProvider({ children }: { children: React.ReactNode }) {
     setLoading,
     setError,
     archiveDialogue,
+    appendToDialogue,
+    updateMemoryFacts,
     clearError,
     resetGamePlay,
-  }), [state, setLoading, setError, archiveDialogue, clearError, resetGamePlay])
+  }), [state, setLoading, setError, archiveDialogue, appendToDialogue, updateMemoryFacts, clearError, resetGamePlay])
 
   return (
     <GamePlayContext.Provider value={value}>
